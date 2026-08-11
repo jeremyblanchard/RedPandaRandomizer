@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Particle 2 — Randomizer</title>
+<style>
+  :root{
+    --bg:#0e1013; --panel:#171a1f; --panel2:#1e222a; --line:#2b313b;
+    --ink:#e6e9ee; --dim:#8b95a5; --accent:#ff6b3d; --accent2:#4ec9b0;
+    --lock:#f0c040; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
+  header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#14171c,#101317);
+         border-bottom:1px solid var(--line);padding:10px 16px;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 16px 64px;}
+  h1{font-size:15px;margin:0;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+  h1 small{color:var(--dim);letter-spacing:.02em;text-transform:none;font-weight:400;margin-left:8px}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:1180px;margin:0 auto}
+  .bar.row2{margin-top:8px}
+  button,select,input[type=text],input[type=number]{
+    background:var(--panel2);color:var(--ink);border:1px solid var(--line);
+    border-radius:6px;padding:7px 11px;font:inherit;}
+  button{cursor:pointer}
+  button:hover{border-color:#454d5c}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#160b06;font-weight:700;
+                 padding:9px 20px;letter-spacing:.04em}
+  button.primary:hover{filter:brightness(1.1)}
+  button.ghost{background:transparent}
+  .dot{width:9px;height:9px;border-radius:50%;background:#8a2b2b;display:inline-block;margin-right:7px}
+  .dot.on{background:#3ecf6a;box-shadow:0 0 8px #3ecf6a88}
+  .status{color:var(--dim);font-size:13px;display:flex;align-items:center}
+  .spacer{flex:1}
+  fieldset{border:1px solid var(--line);border-radius:9px;margin:16px 0 0;padding:10px 14px 14px;background:var(--panel)}
+  legend{color:var(--dim);font-size:11px;letter-spacing:.16em;text-transform:uppercase;padding:0 6px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:6px 22px}
+  .p{display:grid;grid-template-columns:16px 104px 1fr 74px;align-items:center;gap:8px;
+     padding:3px 0;border-bottom:1px solid #ffffff08}
+  .p .name{color:var(--dim);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .p .val{font-family:var(--mono);font-size:12px;text-align:right;color:var(--ink)}
+  .p.changed .val,.p.changed .name{color:var(--accent)}
+  .lk{width:16px;height:16px;padding:0;border:1px solid var(--line);border-radius:4px;
+      background:transparent;font-size:9px;line-height:1;color:transparent}
+  .lk.on{background:var(--lock);border-color:var(--lock);color:#241c00}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;background:transparent;height:18px;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:4px;background:#2f3641;border-radius:2px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+      background:var(--ink);margin-top:-4.5px;border:0;cursor:pointer}
+  input[type=range]:hover::-webkit-slider-thumb{background:var(--accent)}
+  select.pv{width:100%;padding:3px 6px;font-size:12.5px}
+  .fav{display:flex;gap:8px;align-items:center;padding:5px 8px;border:1px solid var(--line);
+       border-radius:6px;background:var(--panel2);margin-bottom:5px}
+  .fav .fname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fav .meta{color:var(--dim);font-size:11px;font-family:var(--mono)}
+  .hint{color:var(--dim);font-size:12px;margin:6px 0 0}
+  .chip{font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line);
+        border-radius:4px;padding:2px 6px}
+  label.inl{display:flex;align-items:center;gap:6px;color:var(--dim);font-size:12.5px;white-space:nowrap}
+  #log{font-family:var(--mono);font-size:11px;color:var(--dim);max-height:130px;overflow:auto;
+       white-space:pre-wrap;background:#0b0d10;border:1px solid var(--line);border-radius:6px;padding:8px}
+  a{color:var(--accent2)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <h1>Particle&nbsp;2 <small>randomizer &amp; editor — Web MIDI SysEx</small></h1>
+    <span class="spacer"></span>
+    <span class="status"><span class="dot" id="dot"></span><span id="status">not connected</span></span>
+    <select id="devsel" title="MIDI output"><option>—</option></select>
+    <button id="connect">Connect</button>
+    <button id="sync" disabled title="Ask the pedal for all current values">Sync&nbsp;←&nbsp;Pedal</button>
+  </div>
+  <div class="bar row2">
+    <button class="primary" id="roll">⚄ Randomize</button>
+    <button id="mutate" title="Nudge the current sound instead of replacing it">Mutate</button>
+    <label class="inl">amount <input type="range" id="amount" min="0" max="100" value="25" style="width:90px"><span class="chip" id="amountv">25%</span></label>
+    <span style="width:10px"></span>
+    <label class="inl" style="color:var(--accent2);font-weight:600">musical
+      <input type="range" id="musical" min="0" max="100" value="80" style="width:110px">
+      <span class="chip" id="musicalv">80%</span></label>
+    <span style="width:10px"></span>
+    <label class="inl">character
+      <select id="character"></select>
+    </label>
+    <button id="undo" title="Previous roll">◀</button>
+    <button id="redo" title="Next roll">▶</button>
+    <span class="chip" id="histv">0/0</span>
+    <span class="spacer"></span>
+    <button id="keep">★ Keep</button>
+    <button id="panic" title="Blend 50%, feedback 0, freeze 0">Panic</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+<fieldset>
+  <legend>Constraints</legend>
+  <div class="bar" style="gap:16px">
+    <label class="inl">max blend <input type="range" id="cBlend" min="0" max="100" value="90" style="width:120px"><span class="chip" id="cBlendv">90</span></label>
+    <label class="inl">max feedback <input type="range" id="cFdbk" min="0" max="100" value="70" style="width:120px"><span class="chip" id="cFdbkv">70</span></label>
+    <label class="inl"><input type="checkbox" id="cFreeze"> allow freeze / drone</label>
+    <label class="inl"><input type="checkbox" id="cSnap" checked> snap pitch to semitones</label>
+    <label class="inl"><input type="checkbox" id="cV22" checked> firmware 2.2+ params</label>
+    <label class="inl"><input type="checkbox" id="cSync"> always tempo-synced</label>
+    <span style="width:8px"></span>
+    <label class="inl" style="color:var(--accent);font-weight:600">
+      <input type="checkbox" id="cNoLimits"> NO LIMITS</label>
+    <span class="spacer"></span>
+    <button id="lockAll" class="ghost">lock all</button>
+    <button id="lockNone" class="ghost">unlock all</button>
+  </div>
+  <p class="hint"><strong>NO LIMITS</strong> ignores the character and every setting on this row: each
+     parameter is rolled uniformly across its whole legal range, note divisions included. Locks still apply.<br>
+     Two things stay fixed even then, because letting them move would make the roll <em>less</em> varied, not more:
+     <em>Expert Mode</em> stays on (the pedal resets the previous mode's parameters whenever Mode changes with it
+     off, silently wiping most of a roll), and the three <em>metaparameters</em> — Chop/Freeze, Delay/Pitch, Param —
+     are never sent, because each one overwrites the individual parameters below that this tool sets directly.</p>
+</fieldset>
+
+<fieldset>
+  <legend>Parameters</legend>
+  <div class="grid" id="params"></div>
+</fieldset>
+
+<fieldset>
+  <legend>Presets on the pedal</legend>
+  <div class="bar">
+    <label class="inl">slot <input type="number" id="slot" min="1" max="127" value="10" style="width:76px"></label>
+    <label class="inl">name <input type="text" id="pname" maxlength="15" placeholder="max 15 chars" style="width:190px"></label>
+    <button id="pWrite" disabled>Write to pedal</button>
+    <button id="pName" disabled>Rename</button>
+    <button id="pLoad" disabled>Load (prog change)</button>
+    <span class="chip">MIDI program 128 = live knobs</span>
+  </div>
+  <p class="hint">Write stores whatever is currently in the pedal's edit buffer — i.e. the sound you just rolled.</p>
+</fieldset>
+
+<fieldset>
+  <legend>Kept sounds <span id="favcount" class="chip"></span></legend>
+  <div id="favs"></div>
+  <div class="bar" style="margin-top:8px">
+    <button id="favExport" class="ghost">Export JSON</button>
+    <button id="favImport" class="ghost">Import JSON</button>
+    <input type="file" id="favFile" accept="application/json,.json" hidden>
+  </div>
+</fieldset>
+
+<fieldset>
+  <legend>Log</legend>
+  <div id="log"></div>
+</fieldset>
+
+</div>
+
+<script>
+"use strict";
+
+/* ─────────────────────────── SysEx protocol ───────────────────────────
+   Reverse-engineered from redpandalab.com/content/apps/particle-editor
+   (its published source map ships the original rpl_midi.js).
+
+   F0 00 02 23 <family> <product> <msgver> <type> <propHi> <propLo> <data...> F7
+   family=0x01 product=0x01 msgver=0x00   type: 0x34 get / 0x35 reply / 0x36 set
+   Parameter values are 24-bit: trunc(value01 * 8388608) sent as 4x 7-bit bytes.
+   Property IDs with bit 0x2000 set carry a raw integer instead (indexed params).
+------------------------------------------------------------------------ */
+const SYSEX_START=0xF0, SYSEX_END=0xF7;
+const RPL=[0x00,0x02,0x23], FAMILY=0x01, PRODUCT=0x01, MSGVER=0x00;
+const MSG_GET=0x34, MSG_REPLY=0x35, MSG_SET=0x36;
+const P_FIRMWARE=0x7F01, P_SAVE_PRESET=0x7F13, P_PROGRAM_NAME=0x7F1C, P_MIDI_CHANNEL=0x7F12;
+const SCALE=8388608;
+
+let midiAccess=null, out=null, inp=null, midiChannel=0;
+
+function log(s){const el=document.getElementById('log');
+  el.textContent=(new Date().toLocaleTimeString()+'  '+s+'\n')+el.textContent;}
+
+function head(type,propId){return [SYSEX_START,...RPL,FAMILY,PRODUCT,MSGVER,type,(propId>>8)&0x7F,propId&0x7F];}
+
+/* outgoing messages are spaced out — the pedal's USB MIDI stack drops bursts */
+const q=[]; let qTimer=null;
+function send(msg){q.push(msg); if(!qTimer) qTimer=setInterval(()=>{
+  if(!q.length){clearInterval(qTimer);qTimer=null;return;}
+  const m=q.shift(); try{ if(out) out.send(m);}catch(e){log('send failed: '+e.message);}
+},6);}
+
+function setProp(propId,data){send([...head(MSG_SET,propId),...data,SYSEX_END]);}
+function getProp(propId,data=[]){send([...head(MSG_GET,propId),...data,SYSEX_END]);}
+function enc24(v){return [(v>>21)&0x7F,(v>>14)&0x7F,(v>>7)&0x7F,v&0x7F];}
+function setParam(propId,v01){setProp(propId,enc24(Math.trunc(SCALE*Math.max(0,Math.min(1,v01)))));}
+function setIndexed(propId,i){setProp(propId,enc24(i|0));}
+function programChange(prog){send([0xC0+midiChannel,prog]);}
+
+function encode7bit(bytes){ // 8-bit -> 7-bit, 3 bytes per 4, big endian
+  const o=[];
+  for(let i=0;i<bytes.length;){
+    const n=Math.min(bytes.length-i,3);
+    if(n===3){o.push((bytes[i]&0xE0)>>5,((bytes[i]&0x1F)<<2)|((bytes[i+1]&0xC0)>>6),
+                     ((bytes[i+1]&0x3F)<<1)|((bytes[i+2]&0x80)>>7), bytes[i+2]&0x7F);}
+    else if(n===2){o.push((bytes[i]&0xE0)>>5,((bytes[i]&0x1F)<<2)|((bytes[i+1]&0xC0)>>6),
+                          (bytes[i+1]&0x3F)<<1,0);}
+    else {o.push((bytes[i]&0xE0)>>5,(bytes[i]&0x1F)<<2,0,0);}
+    i+=n;
+  }
+  return o;
+}
+function setProgramName(prog,name){
+  const b=new TextEncoder().encode(name.slice(0,15));
+  setProp(P_PROGRAM_NAME,[0,prog,(b.length>>7)&0x7F,b.length&0x7F,...encode7bit(b)]);
+}
+
+/* ─────────────────────────── parameter model ─────────────────────────── */
+const DIV_NAMES={0:'Off',1:'8 bars',2:'7 bars',3:'6 bars',4:'5 bars',5:'4 bars',6:'3 bars',
+  7:'2 bars',8:'2 bar triplet',9:'dotted whole',10:'whole',11:'whole triplet',12:'dotted 1/2',
+  13:'1/2',14:'1/2 triplet',15:'dotted 1/4',16:'1/4',17:'1/4 triplet',18:'dotted 1/8',19:'1/8',
+  20:'1/8 triplet',21:'dotted 1/16',22:'1/16',23:'1/16 triplet',24:'dotted 1/32',25:'1/32',
+  26:'1/32 triplet',27:'dotted 1/64',28:'1/64',29:'1/64 triplet',30:'dotted 1/128',31:'1/128'};
+const rng=(a,b)=>{const o=[];for(let i=a;i<=b;i++)o.push(i);return o;};
+const DIV_FAST=[0,...rng(10,31)];   // delay / chop / density
+const DIV_SLOW=[0,...rng(1,26)];    // lfo
+const divOpts=ids=>ids.map(i=>[i,DIV_NAMES[i]]);
+/* divisions that reliably feel musical, used by the tempo-sync characters */
+const DIV_MUSICAL=[10,12,13,15,16,17,18,19,20,21,22];
+
+const MODES=[[0,'Pitch + Dens'],[1,'Pitch + LFO'],[2,'Pitch + Detune'],[3,'Delay + Rnd'],
+             [4,'Delay + Pitch'],[5,'Delay + Rev'],[6,'Delay + LFO'],[7,'Delay + Dens']];
+
+const PARAMS=[
+ {k:'mode',      prop:8226, label:'Mode',        type:'idx', opts:MODES,           g:'Core'},
+ {k:'blend',     prop:0,    label:'Blend',       type:'cont',unit:'pct',           g:'Core'},
+ {k:'feedback',  prop:3,    label:'Feedback',    type:'cont',unit:'pct',           g:'Core'},
+ {k:'fdbkTone',  prop:4,    label:'Fdbk Tone',   type:'cont',unit:'pct',           g:'Core'},
+ {k:'expert',    prop:33,   label:'Expert Mode', type:'tog',                       g:'Core'},
+ {k:'trails',    prop:45,   label:'Trails',      type:'tog',                       g:'Core'},
+
+ {k:'chop',      prop:1,    label:'Chop (grain)',type:'cont',unit:'pct',           g:'Grain'},
+ {k:'density',   prop:10,   label:'Density',     type:'cont',unit:'pct',           g:'Grain'},
+ {k:'freeze',    prop:2,    label:'Freeze thr.', type:'cont',unit:'pct',           g:'Grain'},
+ {k:'freezeMode',prop:8224, label:'Freeze Mode', type:'idx', opts:[[0,'Grain'],[1,'Delay (v1)']], g:'Grain'},
+
+ {k:'delayTime', prop:5,    label:'Delay Time',  type:'cont',unit:'ms',            g:'Delay'},
+ {k:'delayRnd',  prop:6,    label:'Delay Rnd',   type:'cont',unit:'pct',           g:'Delay'},
+ {k:'direction', prop:11,   label:'Direction',   type:'cont',unit:'dir',           g:'Delay'},
+ {k:'fdbkMode',  prop:8238, label:'Fdbk Mode',   type:'idx', v22:true, opts:[[10,'Auto'],[2,'Post Delay'],
+    [3,'Post Delay PP'],[0,'Recycle'],[1,'Recycle PP'],[4,'Repeat #'],[5,'Repeat # / 50%'],
+    [6,'Repeat # / 37%'],[7,'Repeat # / 25%'],[8,'Repeat # / 12%'],[9,'Repeat %']], g:'Delay'},
+
+ {k:'pitch',     prop:7,    label:'Pitch',       type:'cont',unit:'semi',          g:'Pitch'},
+ {k:'detune',    prop:8,    label:'Detune',      type:'cont',unit:'pct',           g:'Pitch'},
+ {k:'pitchRnd',  prop:9,    label:'Pitch Rnd',   type:'cont',unit:'pct',           g:'Pitch'},
+ {k:'lfoRate',   prop:13,   label:'LFO Rate',    type:'cont',unit:'lfo',           g:'Pitch'},
+ {k:'pitchQnt',  prop:8242, label:'Pitch Qnt',   type:'idx', v22:true, opts:[[0,'Free'],[1,'Semitones'],
+    [2,'Octave Up'],[3,'Octave Down'],[4,'5th & Octave'],[5,'Intervals'],[6,'Intervals & Inv.']], g:'Pitch'},
+
+ {k:'pan',       prop:20,   label:'Pan',         type:'cont',unit:'pan', v22:true, g:'Stereo'},
+ {k:'spread',    prop:26,   label:'Spread',      type:'cont',unit:'pct', v22:true, g:'Stereo'},
+
+ {k:'delayDiv',  prop:8233, label:'Delay Div',   type:'idx', opts:divOpts(DIV_FAST), g:'Tempo sync'},
+ {k:'chopDiv',   prop:8234, label:'Chop Div',    type:'idx', opts:divOpts(DIV_FAST), g:'Tempo sync'},
+ {k:'densityDiv',prop:8235, label:'Density Div', type:'idx', opts:divOpts(DIV_FAST), g:'Tempo sync'},
+ {k:'lfoDiv',    prop:8236, label:'LFO Div',     type:'idx', opts:divOpts(DIV_SLOW), g:'Tempo sync'},
+];
+const BY_KEY=Object.fromEntries(PARAMS.map(p=>[p.k,p]));
+const BY_PROP=Object.fromEntries(PARAMS.map(p=>[p.prop,p]));
+
+/* current values: continuous 0..1, indexed = integer, toggle = 0|1 */
+const state={};
+const locks={};
+PARAMS.forEach(p=>{state[p.k] = p.type==='cont' ? 0.5 : (p.type==='tog' ? 0 : p.opts[0][0]); locks[p.k]=false;});
+state.mode=5; state.blend=0.5; state.feedback=0.2; state.direction=1; state.pitch=0.5;
+state.lfoRate=0.5; state.pan=0.5; state.fdbkMode=10; state.freeze=0;
+
+function fmt(p,v){
+  if(p.type==='tog') return v?'on':'off';
+  if(p.type==='idx'){const o=p.opts.find(o=>o[0]==v); return o?o[1]:('#'+v);}
+  switch(p.unit){
+    case 'ms':   return Math.round(v*2500)+' ms';
+    case 'semi': {const s=(v*2-1)*12; return (s>=0?'+':'')+s.toFixed(1)+' st';}
+    case 'dir':  return v>=0.995?'fwd':(v<=0.005?'rev':Math.round(v*100)+'% fwd');
+    case 'lfo':  return Math.abs(v-0.5)<0.01?'off':(Math.round(v*100)+(v<0.5?'% (slow)':'% (fast)'));
+    case 'pan':  {const c=Math.round((v*2-1)*100); return c===0?'C':(c<0?'L'+(-c):'R'+c);}
+    default:     return Math.round(v*100)+'%';
+  }
+}
+
+/* ─────────────────────────── characters ───────────────────────────
+   Each character biases the roll. `r` = ranges for continuous params,
+   `modes` = allowed mode values, `pick` = allowed values for indexed
+   params, `divs` = 'off' | 'rare' | 'musical'.
+------------------------------------------------------------------- */
+const BASE={
+  blend:[0.35,1], feedback:[0,1], fdbkTone:[0.25,1], chop:[0,1], density:[0,1],
+  freeze:[0,0], delayTime:[0,1], delayRnd:[0,1], direction:[0,1], pitch:[0,1],
+  detune:[0,1], pitchRnd:[0,1], lfoRate:[0.46,0.54], pan:[0.4,0.6], spread:[0,1]
+};
+const CHARACTERS={
+  chaos:{label:'Full chaos', modes:[0,1,2,3,4,5,6,7], divs:'rare',
+    r:{lfoRate:[0,1], freeze:[0,0.25], fdbkTone:[0,1]}},
+
+  ambient:{label:'Ambient wash', modes:[0,2,7], divs:'off',
+    r:{blend:[0.4,0.8], feedback:[0.45,0.85], fdbkTone:[0.4,0.95], chop:[0.45,0.95],
+       density:[0.5,1], delayTime:[0.2,0.75], direction:[0.85,1], detune:[0.08,0.5],
+       pitchRnd:[0,0.35], spread:[0.4,1], pan:[0.45,0.55]},
+    pick:{fdbkMode:[2,3,2,3,10], pitchQnt:[4,5,6,1], freezeMode:[0]}},
+
+  glitch:{label:'Glitch / stutter', modes:[3,4,5,7], divs:'musical',
+    r:{blend:[0.5,1], feedback:[0.2,0.65], chop:[0,0.3], density:[0.1,0.6],
+       delayRnd:[0.35,1], delayTime:[0.1,0.7], direction:[0.3,1], spread:[0.2,1]},
+    pick:{fdbkMode:[4,5,6,7,8,9], freezeMode:[0]}},
+
+  reverse:{label:'Reverse', modes:[5], divs:'musical',
+    r:{blend:[0.45,0.9], feedback:[0.15,0.6], chop:[0.25,0.7], delayTime:[0.25,0.85],
+       direction:[0,0.35], detune:[0,0.2], pitchRnd:[0,0.2]},
+    pick:{fdbkMode:[10,0,2], freezeMode:[0]}},
+
+  stretch:{label:'Time stretch', modes:[6], divs:'off',
+    r:{blend:[0.5,1], feedback:[0.1,0.5], chop:[0.05,0.6], delayTime:[0.4,1],
+       direction:[0.7,1], lfoRate:[0,1]},
+    pick:{fdbkMode:[10,2,0], freezeMode:[0]}},
+
+  cloud:{label:'Pitch cloud', modes:[2], divs:'off',
+    r:{blend:[0.4,0.85], feedback:[0.4,0.85], chop:[0.3,0.8], density:[0.4,1],
+       detune:[0.3,0.95], pitch:[0.35,0.65], spread:[0.5,1], direction:[0.9,1]},
+    pick:{fdbkMode:[2,3,0,1], pitchQnt:[1,4,5,6], freezeMode:[0]}},
+
+  shimmer:{label:'Shimmer / organ', modes:[0,2], divs:'off',
+    r:{blend:[0.4,0.8], feedback:[0.5,0.9], fdbkTone:[0.5,1], chop:[0.4,0.9],
+       density:[0.5,1], detune:[0,0.3], pitch:[0.7,0.98], direction:[0.9,1], spread:[0.3,0.9]},
+    pick:{fdbkMode:[0,1,10], pitchQnt:[2,4], freezeMode:[0]}},
+
+  rhythmic:{label:'Tempo-synced', modes:[3,4,5,7], divs:'musical',
+    r:{blend:[0.45,0.95], feedback:[0.2,0.7], chop:[0.05,0.5], density:[0.2,0.9],
+       delayRnd:[0,0.7], direction:[0.2,1], spread:[0.2,0.9]},
+    pick:{fdbkMode:[10,2,3,4,5,9], freezeMode:[0]}},
+
+  broken:{label:'Broken tape', modes:[3], divs:'rare',
+    r:{blend:[0.45,0.95], feedback:[0.3,0.75], fdbkTone:[0.1,0.5], chop:[0.02,0.35],
+       delayRnd:[0.5,1], delayTime:[0.3,1], detune:[0,0.25], direction:[0.5,1]},
+    pick:{fdbkMode:[10,0,2,9], freezeMode:[0,1]}},
+};
+
+/* ─────────────────────────── musicality ───────────────────────────
+   Ranges each parameter has to stay inside to sound intentional rather than
+   broken. Sources: the Particle 2 manual's parameter descriptions plus the
+   behaviour they imply.
+-------------------------------------------------------------------- */
+const MUSICAL={
+  blend:    [0.25,0.60], // dry stays at unity to 50% — keeps a dry anchor under the effect
+  feedback: [0.10,0.55], // recycle feedback stacks pitch and re-chops grains; runs away above this
+  fdbkTone: [0.45,0.90], // dark enough to sit behind the dry, bright enough to still be heard
+  chop:     [0.28,0.78], // grain size. very short = glitch tremolo/noise, per the manual
+  density:  [0.55,1.00], // high = grains overlap into a continuous sound; low = disconnected blips
+  freeze:   [0,0],       // a threshold: anything above 0 starts holding the buffer instead of you
+  delayTime:[0.04,0.32], // ~100–800 ms of the 0–2500 ms range
+  delayRnd: [0,0.22],
+  direction:[1,1],       // 100% = all forward. mid values flip grains at random = glitch
+  detune:   [0.05,0.30],
+  pitchRnd: [0,0.15],
+  lfoRate:  [0.5,0.5],   // noon = off
+  pan:      [0.45,0.55],
+  spread:   [0.15,0.65]
+};
+
+/* Each mode is "about" one or two moving parameters. Everything else that moves
+   gets neutralised, so a roll has one clear idea instead of four fighting. */
+const SIGNATURE={0:['density','pitch'], 1:['lfoRate','pitch'], 2:['detune','pitch'],
+                 3:['delayRnd','delayTime'], 4:['pitchRnd','delayTime'],
+                 5:['direction','delayTime'], 6:['lfoRate','delayTime'], 7:['density','delayTime']};
+/* …and when a parameter *is* the point of the mode, it gets to move properly. */
+const SIGNATURE_RANGE={density:[0.15,1], lfoRate:[0.18,0.82], detune:[0.15,0.70],
+  delayRnd:[0.25,0.85], pitchRnd:[0.20,0.65], direction:[0,0.30], delayTime:[0.04,0.60],
+  pitch:[0,1]};
+
+/* Not every rule matters equally, so they don't all reach full strength together.
+   A single slider drives three curves: the rules that make a sound *unusable* are
+   enforced early, the ones that are merely adventurous hang on until the top.
+     H — guitar disappears / no dry anchor / runaway noise   → full by 40%
+     M — the mush sources: stacked motion, off-key pitch     → full by 80%
+     S — legitimate but wild: stutter feedback, odd divisions → full at 100%     */
+const CURVE={freeze:'H', blend:'H', feedback:'H',
+             direction:'M', delayRnd:'M', pitchRnd:'M', detune:'M', lfoRate:'M', density:'M',
+             chop:'S', fdbkTone:'S', delayTime:'S', pan:'S', spread:'S'};
+const curves=t=>({H:clamp(t/0.4), M:clamp(t/0.8), S:t});
+
+/* consonant intervals in semitones, weighted toward unison / octave / fifth */
+const CONSONANT=[0,0,0,0,12,12,12,-12,-12,7,7,-5,-5,5,-7,3,4,-3,-4,10,-10];
+const MUSICAL_FDBK=[10,2,3,0,1];      // drop the Repeat #/% family — inherently stuttery
+const MUSICAL_QNT=[1,4,5,6];          // drop Free — continuous shift lands between notes
+const DIV_BASE=[13,15,16,17,18,19];   // 1/2 … 1/8, sensible delay divisions
+
+/* ─────────────────────────── the roll ─────────────────────────── */
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+
+function constraints(){return{
+  maxBlend:+document.getElementById('cBlend').value/100,
+  maxFdbk:+document.getElementById('cFdbk').value/100,
+  freeze:document.getElementById('cFreeze').checked,
+  snap:document.getElementById('cSnap').checked,
+  v22:document.getElementById('cV22').checked,
+  forceSync:document.getElementById('cSync').checked,
+  noLimits:document.getElementById('cNoLimits').checked,
+  musical:+document.getElementById('musical').value/100};}
+
+function rollDiv(mode,allowed){
+  if(mode==='off')     return Math.random()<0.12 ? pick(DIV_MUSICAL) : 0;
+  if(mode==='rare')    return Math.random()<0.35 ? pick(allowed.filter(v=>v!==0)) : 0;
+  /* musical */        return Math.random()<0.8  ? pick(DIV_MUSICAL.filter(v=>allowed.includes(v))) : 0;
+}
+
+const lerp=(x,y,t)=>x+(y-x)*t;
+const lerpR=(w,m,t)=>[lerp(w[0],m[0],t), lerp(w[1],m[1],t)];
+const semiToVal=s=>(s/12+1)/2;
+
+/* Decisions that span several parameters — mode, and note divisions that have to
+   relate to each other — are made once per roll, before the per-parameter pass. */
+function rollPlan(ch,c){
+  const t=c.noLimits?0:c.musical;
+  const mode = c.noLimits ? pick(MODES.map(o=>o[0])) : pick(ch.modes);
+  let divs=null;
+  if(Math.random()<curves(t).S){
+    /* Independent random divisions on delay/chop/density give polyrhythmic mush.
+       The manual's own advice: set chop to the same division as delay, or a
+       shorter one, so the slicing lines up with the repeats. */
+    if(Math.random()<0.45) divs={delayDiv:0,chopDiv:0,densityDiv:0,lfoDiv:0};
+    else{
+      const d=pick(DIV_BASE);
+      const shorter=DIV_MUSICAL.filter(v=>v>=d);   // higher index = shorter note
+      divs={delayDiv:d, chopDiv:pick(shorter.slice(0,4)), densityDiv:0, lfoDiv:0};
+    }
+  }
+  return {mode, divs, sig:SIGNATURE[mode]||[], t};
+}
+
+function rollValue(p,ch,c,plan){
+  const all=p.opts?p.opts.map(o=>o[0]):null;
+  const t=plan?plan.t:(c.noLimits?0:c.musical);
+  const sig=plan?plan.sig:[];
+
+  if(p.type==='tog'){
+    /* Expert Mode stays on even under NO LIMITS: with it off the pedal resets the
+       previous mode's parameters on every Mode change, wiping most of the roll. */
+    if(p.k==='expert') return 1;
+    if(p.k==='trails') return c.noLimits ? (Math.random()<0.5?1:0) : state.trails;
+    return Math.random()<0.5?1:0;
+  }
+
+  if(p.type==='idx'){
+    if(p.k==='mode') return plan?plan.mode:(c.noLimits?pick(all):pick(ch.modes));
+    if(c.noLimits) return pick(all);
+    if(p.k.endsWith('Div')){
+      if(plan&&plan.divs) return plan.divs[p.k];
+      return rollDiv(c.forceSync?'musical':(ch.divs||'off'), all);
+    }
+    const cv=curves(t);
+    let list=(ch.pick&&ch.pick[p.k]) || all;
+    if(p.k==='pitchQnt'   && Math.random()<cv.M) list=MUSICAL_QNT;
+    if(p.k==='fdbkMode'   && Math.random()<cv.S) list=MUSICAL_FDBK;
+    if(p.k==='freezeMode' && Math.random()<cv.S) list=[0];
+    return pick(list);
+  }
+
+  if(c.noLimits) return Math.random();
+
+  let [a,b]=(ch.r&&ch.r[p.k]) || BASE[p.k] || [0,1];
+  if(p.k==='freeze' && c.freeze) [a,b]=[0,1];
+
+  /* Pull the range toward the musical one — or toward the wider "this is what the
+     mode is for" range when this parameter is the mode's signature. */
+  const cv=curves(t);
+  const tgt = sig.includes(p.k) ? (SIGNATURE_RANGE[p.k]||MUSICAL[p.k]) : MUSICAL[p.k];
+  if(tgt && t>0 && !(p.k==='freeze'&&c.freeze))
+    [a,b]=lerpR([a,b],tgt,cv[CURVE[p.k]||'S']);
+
+  let v=rnd(a,b);
+
+  /* LFO is bipolar around noon; a signature LFO should commit to a side, not idle. */
+  if(p.k==='lfoRate' && sig.includes('lfoRate') && Math.random()<cv.M)
+    v = Math.random()<0.5 ? rnd(0.18,0.44) : rnd(0.56,0.82);
+
+  /* Continuous pitch lands between notes. Snap to a consonant interval instead. */
+  if(p.k==='pitch' && Math.random()<cv.M) v=semiToVal(pick(CONSONANT));
+  else if(p.k==='pitch' && c.snap){const s=Math.round((v*2-1)*12); v=semiToVal(s);}
+
+  if(p.k==='blend')    v=Math.min(v,c.maxBlend);
+  if(p.k==='feedback') v=Math.min(v,c.maxFdbk);
+  return clamp(v);
+}
+
+function randomize(){
+  const ch=CHARACTERS[document.getElementById('character').value], c=constraints();
+  const plan=rollPlan(ch,c);
+  PARAMS.forEach(p=>{
+    if(locks[p.k]) return;
+    if(p.v22 && !c.v22) return;
+    state[p.k]=rollValue(p,ch,c,plan);
+  });
+  commit('roll · '+ch.label+(c.noLimits?' · no limits':' · musical '+Math.round(c.musical*100)+'%'));
+}
+
+function mutate(){
+  const ch=CHARACTERS[document.getElementById('character').value], c=constraints();
+  const amt=+document.getElementById('amount').value/100;
+  const sig=SIGNATURE[state.mode]||[];
+  PARAMS.forEach(p=>{
+    if(locks[p.k]) return;
+    if(p.v22 && !c.v22) return;
+    if(p.type==='cont'){
+      let [a,b]=c.noLimits ? [0,1] : ((ch.r&&ch.r[p.k]) || BASE[p.k] || [0,1]);
+      if(!c.noLimits && p.k==='freeze' && c.freeze) [a,b]=[0,1];
+      if(!c.noLimits && c.musical>0 && !(p.k==='freeze'&&c.freeze)){
+        const tgt = sig.includes(p.k) ? (SIGNATURE_RANGE[p.k]||MUSICAL[p.k]) : MUSICAL[p.k];
+        if(tgt) [a,b]=lerpR([a,b],tgt,curves(c.musical)[CURVE[p.k]||'S']);
+      }
+      let v=state[p.k]+(Math.random()*2-1)*amt*Math.max(0.25,b-a);
+      v=clamp(v,Math.min(a,state[p.k]),Math.max(b,state[p.k]));
+      if(!c.noLimits){
+        if(p.k==='blend')    v=Math.min(v,c.maxBlend);
+        if(p.k==='feedback') v=Math.min(v,c.maxFdbk);
+        if(p.k==='pitch' && c.snap){const s=Math.round((v*2-1)*12); v=(s/12+1)/2;}
+      }
+      state[p.k]=clamp(v);
+    } else if(p.k!=='mode' && Math.random()<amt*0.6){
+      /* Mode is held: changing it is a different sound, not a nudge. */
+      state[p.k]=rollValue(p,ch,c,{mode:state.mode,divs:null,sig,t:c.musical});
+    }
+  });
+  commit('mutate '+Math.round(amt*100)+'%');
+}
+
+/* ─────────────────────────── send / history ─────────────────────────── */
+function sendAll(){
+  if(!out) return;
+  /* Order matters: expert mode first, then Mode. Outside expert mode the pedal
+     resets the previous mode's parameters when Mode changes, so it has to land
+     before everything else. */
+  const c=constraints();
+  const order=['expert','mode',...PARAMS.map(p=>p.k).filter(k=>k!=='expert'&&k!=='mode')];
+  order.forEach(k=>{
+    const p=BY_KEY[k];
+    if(p.v22 && !c.v22) return;
+    if(p.type==='idx') setIndexed(p.prop,state[k]);
+    else setParam(p.prop,p.type==='tog'?(state[k]?1:0):state[k]);
+  });
+}
+
+const history=[]; let hIdx=-1;
+function snapshot(){return JSON.parse(JSON.stringify(state));}
+function commit(reason){
+  history.splice(hIdx+1);
+  history.push(snapshot()); hIdx=history.length-1;
+  if(history.length>200){history.shift();hIdx--;}
+  render(); sendAll(); log(reason);
+}
+function goto(i){
+  if(i<0||i>=history.length) return;
+  hIdx=i; Object.assign(state,JSON.parse(JSON.stringify(history[i])));
+  render(); sendAll(); log('history '+(i+1)+'/'+history.length);
+}
+
+/* ─────────────────────────── UI ─────────────────────────── */
+const rows={};
+function buildUI(){
+  const host=document.getElementById('params');
+  const groups=[...new Set(PARAMS.map(p=>p.g))];
+  groups.forEach(g=>{
+    const col=document.createElement('div');
+    col.innerHTML='<div style="color:var(--accent2);font-size:11px;letter-spacing:.14em;'+
+                  'text-transform:uppercase;margin:6px 0 4px">'+g+'</div>';
+    PARAMS.filter(p=>p.g===g).forEach(p=>{
+      const row=document.createElement('div'); row.className='p';
+      const lk=document.createElement('button'); lk.className='lk'; lk.textContent='●';
+      lk.title='lock '+p.label;
+      lk.onclick=()=>{locks[p.k]=!locks[p.k]; lk.classList.toggle('on',locks[p.k]);};
+      const nm=document.createElement('div'); nm.className='name'; nm.textContent=p.label;
+      const val=document.createElement('div'); val.className='val';
+      let ctl;
+      if(p.type==='cont'){
+        ctl=document.createElement('input'); ctl.type='range'; ctl.min=0; ctl.max=1000; ctl.step=1;
+        ctl.oninput=()=>{state[p.k]=+ctl.value/1000; val.textContent=fmt(p,state[p.k]);
+                         setParam(p.prop,state[p.k]);};
+      } else if(p.type==='tog'){
+        ctl=document.createElement('button'); ctl.style.width='100%'; ctl.style.padding='3px';
+        ctl.onclick=()=>{state[p.k]=state[p.k]?0:1; render(); setParam(p.prop,state[p.k]);};
+      } else {
+        ctl=document.createElement('select'); ctl.className='pv';
+        p.opts.forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;ctl.append(o);});
+        ctl.onchange=()=>{state[p.k]=+ctl.value; setIndexed(p.prop,state[p.k]);};
+      }
+      row.append(lk,nm,ctl,val); col.append(row);
+      rows[p.k]={row,ctl,val,lk};
+    });
+    host.append(col);
+  });
+}
+
+let prev={};
+function render(){
+  PARAMS.forEach(p=>{
+    const r=rows[p.k], v=state[p.k];
+    if(p.type==='cont') r.ctl.value=Math.round(v*1000);
+    else if(p.type==='tog') r.ctl.textContent=v?'ON':'OFF';
+    else r.ctl.value=v;
+    /* selects and toggles already show their own value */
+    r.val.textContent = p.type==='cont' ? fmt(p,v) : '';
+    r.row.classList.toggle('changed', prev[p.k]!==undefined && prev[p.k]!==v);
+    r.lk.classList.toggle('on',locks[p.k]);
+  });
+  prev=snapshot();
+  document.getElementById('histv').textContent=(hIdx+1)+'/'+history.length;
+  document.getElementById('undo').disabled=hIdx<=0;
+  document.getElementById('redo').disabled=hIdx>=history.length-1;
+}
+
+/* ─────────────────────────── MIDI connect ─────────────────────────── */
+async function connect(){
+  try{
+    midiAccess=await navigator.requestMIDIAccess({sysex:true});
+  }catch(e){
+    log('MIDI access denied: '+e.message+
+        ' — Chrome only, and the page must be on https:// or http://localhost.');
+    return;
+  }
+  midiAccess.onstatechange=()=>refreshDevices();
+  refreshDevices(); autoPick();
+}
+function refreshDevices(){
+  const sel=document.getElementById('devsel'); const cur=sel.value;
+  sel.innerHTML='';
+  for(const o of midiAccess.outputs.values()){
+    const opt=document.createElement('option'); opt.value=o.id; opt.textContent=o.name; sel.append(opt);
+  }
+  if([...sel.options].some(o=>o.value===cur)) sel.value=cur;
+}
+function autoPick(){
+  for(const o of midiAccess.outputs.values()){
+    if(o.name.startsWith('Particle')){document.getElementById('devsel').value=o.id; break;}
+  }
+  useSelected();
+}
+function useSelected(){
+  const id=document.getElementById('devsel').value;
+  out=midiAccess.outputs.get(id)||null;
+  inp=null;
+  if(out){for(const i of midiAccess.inputs.values()){
+    if(i.name===out.name || i.name.startsWith('Particle')){inp=i; break;}}}
+  if(inp) inp.onmidimessage=onMessage;
+  const ok=!!out;
+  document.getElementById('dot').classList.toggle('on',ok);
+  document.getElementById('status').textContent=ok?(out.name+(inp?' (in+out)':' (out only)')):'no output';
+  ['sync','pWrite','pName','pLoad'].forEach(i=>document.getElementById(i).disabled=!ok);
+  if(ok){log('using '+out.name); getProp(P_FIRMWARE); getProp(P_MIDI_CHANNEL); syncFromPedal();}
+}
+
+function onMessage(e){
+  const d=e.data;
+  if(d[0]!==SYSEX_START) return;
+  if(!(d[1]===RPL[0]&&d[2]===RPL[1]&&d[3]===RPL[2]&&d[4]===FAMILY&&d[5]===PRODUCT&&d[6]===MSGVER)) return;
+  if(d[7]!==MSG_REPLY) return;
+  const prop=(d[8]<<8)|d[9];
+  if(prop===P_FIRMWARE){log('firmware '+d[10]+'.'+d[11]+'.'+d[12]+String.fromCharCode(d[13])); return;}
+  if(prop===P_MIDI_CHANNEL){midiChannel=d[10]; log('midi channel '+d[10]); return;}
+  const p=BY_PROP[prop]; if(!p) return;
+  const iv=(d[10]<<21)|(d[11]<<14)|(d[12]<<7)|d[13];
+  state[p.k]= (prop&0x2000) ? iv : (p.type==='tog' ? (iv/SCALE>=0.5?1:0) : iv/SCALE);
+  render();
+}
+function syncFromPedal(){
+  PARAMS.forEach(p=>getProp(p.prop));
+  log('requested all values from pedal');
+  setTimeout(()=>{if(history.length===0) commitSilent('synced from pedal');},1200);
+}
+function commitSilent(reason){history.push(snapshot());hIdx=history.length-1;render();log(reason);}
+
+/* ─────────────────────────── favourites ─────────────────────────── */
+const FKEY='particle2.favs';
+function favs(){try{return JSON.parse(localStorage.getItem(FKEY))||[];}catch(e){return [];}}
+function saveFavs(a){localStorage.setItem(FKEY,JSON.stringify(a));renderFavs();}
+function renderFavs(){
+  const host=document.getElementById('favs'), a=favs();
+  document.getElementById('favcount').textContent=a.length+' saved';
+  host.innerHTML='';
+  if(!a.length){host.innerHTML='<p class="hint">Nothing kept yet — hit ★ Keep after a roll you like.</p>';return;}
+  a.forEach((f,i)=>{
+    const el=document.createElement('div'); el.className='fav';
+    const nm=document.createElement('div'); nm.className='fname'; nm.textContent=f.name;
+    const meta=document.createElement('span'); meta.className='meta';
+    meta.textContent=(BY_KEY.mode.opts.find(o=>o[0]==f.v.mode)||[,'?'])[1];
+    const load=document.createElement('button'); load.textContent='Recall';
+    load.onclick=()=>{Object.assign(state,JSON.parse(JSON.stringify(f.v)));commit('recall "'+f.name+'"');};
+    const ren=document.createElement('button'); ren.className='ghost'; ren.textContent='Rename';
+    ren.onclick=()=>{const n=prompt('Name',f.name); if(n){const b=favs();b[i].name=n;saveFavs(b);} };
+    const del=document.createElement('button'); del.className='ghost'; del.textContent='✕';
+    del.onclick=()=>{const b=favs();b.splice(i,1);saveFavs(b);};
+    el.append(nm,meta,load,ren,del); host.append(el);
+  });
+}
+
+/* ─────────────────────────── wiring ─────────────────────────── */
+function init(){
+  const csel=document.getElementById('character');
+  Object.entries(CHARACTERS).forEach(([k,v])=>{
+    const o=document.createElement('option'); o.value=k; o.textContent=v.label; csel.append(o);});
+  csel.value='chaos';
+
+  buildUI(); render(); renderFavs();
+
+  document.getElementById('connect').onclick=connect;
+  document.getElementById('devsel').onchange=useSelected;
+  document.getElementById('sync').onclick=syncFromPedal;
+  document.getElementById('roll').onclick=randomize;
+  document.getElementById('mutate').onclick=mutate;
+  document.getElementById('undo').onclick=()=>goto(hIdx-1);
+  document.getElementById('redo').onclick=()=>goto(hIdx+1);
+  document.getElementById('panic').onclick=()=>{state.blend=0.5;state.feedback=0;state.freeze=0;
+    render();setParam(0,0.5);setParam(3,0);setParam(2,0);log('panic');};
+  document.getElementById('lockAll').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=true);render();};
+  document.getElementById('lockNone').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=false);render();};
+
+  const nl=document.getElementById('cNoLimits');
+  const overridden=['cBlend','cFdbk','cFreeze','cSnap','cSync','character','musical'];
+  nl.onchange=()=>{
+    overridden.forEach(i=>{const el=document.getElementById(i);
+      el.disabled=nl.checked; el.closest('label,.inl')?.style.setProperty('opacity',nl.checked?'.4':'1');});
+    document.getElementById('roll').textContent=nl.checked?'⚄ Randomize · NO LIMITS':'⚄ Randomize';
+  };
+  nl.onchange();
+
+  [['amount','amountv','%'],['musical','musicalv','%'],
+   ['cBlend','cBlendv',''],['cFdbk','cFdbkv','']].forEach(([a,b,s])=>{
+    const r=document.getElementById(a),o=document.getElementById(b);
+    const u=()=>o.textContent=r.value+s; r.oninput=u; u();});
+
+  document.getElementById('keep').onclick=()=>{
+    const n=prompt('Name this sound',
+      CHARACTERS[csel.value].label+' '+new Date().toLocaleTimeString());
+    if(!n) return;
+    const a=favs(); a.unshift({name:n,v:snapshot(),ts:Date.now()}); saveFavs(a);};
+
+  document.getElementById('pWrite').onclick=()=>{
+    const s=+document.getElementById('slot').value;
+    if(!(s>=1&&s<=127)) return;
+    if(!confirm('Overwrite preset slot '+s+' on the pedal?')) return;
+    setProp(P_SAVE_PRESET,[s]); log('wrote preset '+s);
+    const n=document.getElementById('pname').value.trim();
+    if(n) setTimeout(()=>{setProgramName(s,n); log('named preset '+s+' "'+n+'"');},400);};
+  document.getElementById('pName').onclick=()=>{
+    const s=+document.getElementById('slot').value, n=document.getElementById('pname').value.trim();
+    if(n) {setProgramName(s,n); log('renamed preset '+s);}};
+  document.getElementById('pLoad').onclick=()=>{
+    const s=+document.getElementById('slot').value;
+    programChange(s); log('program change '+s); setTimeout(syncFromPedal,300);};
+
+  document.getElementById('favExport').onclick=()=>{
+    const b=new Blob([JSON.stringify(favs(),null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+    a.download='particle2-sounds.json'; a.click();};
+  document.getElementById('favImport').onclick=()=>document.getElementById('favFile').click();
+  document.getElementById('favFile').onchange=async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{const inc=JSON.parse(await f.text());
+        if(Array.isArray(inc)) saveFavs([...inc,...favs()]);}
+    catch(err){log('import failed: '+err.message);}
+    e.target.value='';};
+
+  document.addEventListener('keydown',e=>{
+    if(e.target.matches('input,select,textarea')) return;
+    if(e.code==='Space'){e.preventDefault();randomize();}
+    if(e.key==='m') mutate();
+    if(e.key==='[') goto(hIdx-1);
+    if(e.key===']') goto(hIdx+1);
+  });
+
+  if(!navigator.requestMIDIAccess)
+    log('This browser has no Web MIDI. Use Chrome (or Edge) over https:// or http://localhost.');
+  else log('Ready. Click Connect. Space = randomize, m = mutate, [ ] = history.');
+}
+init();
+</script>
+</body>
+</html>
