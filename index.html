@@ -15,7 +15,26 @@
        font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;}
   header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#14171c,#101317);
          border-bottom:1px solid var(--line);padding:10px 16px;}
-  .wrap{max-width:1180px;margin:0 auto;padding:0 16px 64px;}
+  .wrap{max-width:1560px;margin:0 auto;padding:0 16px 64px;
+        display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+  @media (max-width:1200px){.wrap{grid-template-columns:minmax(0,1fr)}aside{position:static!important}}
+  aside{position:sticky;top:132px}
+  aside fieldset{margin:16px 0 0}
+  .plist{max-height:min(46vh,420px);overflow-y:auto;margin:0 -4px;padding:0 4px}
+  .pr{display:grid;grid-template-columns:26px 1fr auto;gap:5px;align-items:center;
+      padding:1px 3px;border-radius:5px;font-size:12.5px}
+  .pr:hover{background:#ffffff0a}
+  .pr.empty .nm{font-style:italic;color:#5c6675}
+  .pr.cur{background:#ff6b3d1c;box-shadow:inset 2px 0 0 var(--accent)}
+  .pr .num{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:right;
+           cursor:pointer;padding:3px 1px;border-radius:3px}
+  .pr .num:hover{background:var(--accent);color:#160b06}
+  .pr .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:text;
+          padding:3px 4px;border-radius:4px}
+  .pr .nm:hover{background:#ffffff12}
+  .pr .act{display:flex;gap:3px;opacity:0;transition:opacity .1s}
+  .pr:hover .act{opacity:1}
+  .pr .act button{padding:1px 6px;font-size:11px;border-radius:4px}
   h1{font-size:15px;margin:0;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
   h1 small{color:var(--dim);letter-spacing:.02em;text-transform:none;font-weight:400;margin-left:8px}
   .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:1180px;margin:0 auto}
@@ -86,9 +105,6 @@
     <label class="inl" style="color:var(--accent2);font-weight:600">sanity
       <input type="range" id="sanity" min="0" max="100" value="80" style="width:96px">
       <span class="chip" id="sanityv">80%</span></label>
-    <label class="inl">character
-      <select id="character" title="Which corner of the pedal to roll in"></select>
-    </label>
     <label class="inl">history
       <button id="undo" title="Back to the previous roll">◀</button>
       <button id="redo" title="Forward to the next roll">▶</button>
@@ -103,6 +119,7 @@
 </header>
 
 <div class="wrap">
+<main>
 
 <fieldset>
   <legend>Constraints</legend>
@@ -120,7 +137,7 @@
     <button id="lockAll" class="ghost">lock all</button>
     <button id="lockNone" class="ghost">unlock all</button>
   </div>
-  <p class="hint"><strong>NO LIMITS</strong> ignores the character and every setting on this row: each
+  <p class="hint"><strong>NO LIMITS</strong> ignores sanity and every other setting on this row: each
      parameter is rolled uniformly across its whole legal range, note divisions included. Locks still apply.<br>
      Two things stay fixed even then, because letting them move would make the roll <em>less</em> varied, not more:
      <em>Expert Mode</em> stays on (the pedal resets the previous mode's parameters whenever Mode changes with it
@@ -134,32 +151,36 @@
 </fieldset>
 
 <fieldset>
-  <legend>Presets on the pedal</legend>
-  <div class="bar">
-    <label class="inl">slot <input type="number" id="slot" min="1" max="127" value="10" style="width:76px"></label>
-    <label class="inl">name <input type="text" id="pname" maxlength="15" placeholder="max 15 chars" style="width:190px"></label>
-    <button id="pWrite" disabled>Write to pedal</button>
-    <button id="pName" disabled>Rename</button>
-    <button id="pLoad" disabled>Load (prog change)</button>
-    <span class="chip">MIDI program 128 = live knobs</span>
-  </div>
-  <p class="hint">Write stores whatever is currently in the pedal's edit buffer — i.e. the sound you just rolled.</p>
-</fieldset>
-
-<fieldset>
-  <legend>Kept sounds <span id="favcount" class="chip"></span></legend>
-  <div id="favs"></div>
-  <div class="bar" style="margin-top:8px">
-    <button id="favExport" class="ghost">Export JSON</button>
-    <button id="favImport" class="ghost">Import JSON</button>
-    <input type="file" id="favFile" accept="application/json,.json" hidden>
-  </div>
-</fieldset>
-
-<fieldset>
   <legend>Log</legend>
   <div id="log"></div>
 </fieldset>
+
+</main>
+
+<aside>
+  <fieldset>
+    <legend>Presets on the pedal</legend>
+    <div class="bar" style="gap:6px;margin-bottom:8px">
+      <button id="pScan" disabled title="Read every slot and its name off the pedal">Refresh</button>
+      <button id="pWriteSel" disabled title="Write the current sound into the selected slot">Write here</button>
+      <span class="spacer"></span>
+      <span class="chip" id="pCount">—</span>
+    </div>
+    <div class="plist" id="plist"></div>
+    <p class="hint" style="font-size:11.5px">Click the number to load a slot, the name to rename it.
+       Slots 1–4 are the front-panel presets; program 128 returns to the live knobs.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>Kept sounds <span id="favcount" class="chip"></span></legend>
+    <div id="favs"></div>
+    <div class="bar" style="margin-top:8px;gap:6px">
+      <button id="favExport" class="ghost">Export</button>
+      <button id="favImport" class="ghost">Import</button>
+      <input type="file" id="favFile" accept="application/json,.json" hidden>
+    </div>
+  </fieldset>
+</aside>
 
 </div>
 
@@ -179,6 +200,8 @@ const SYSEX_START=0xF0, SYSEX_END=0xF7;
 const RPL=[0x00,0x02,0x23], FAMILY=0x01, PRODUCT=0x01, MSGVER=0x00;
 const MSG_GET=0x34, MSG_REPLY=0x35, MSG_SET=0x36;
 const P_FIRMWARE=0x7F01, P_SAVE_PRESET=0x7F13, P_PROGRAM_NAME=0x7F1C, P_MIDI_CHANNEL=0x7F12;
+const P_PROGRAM_VALID=0x7F1A;
+const NUM_PRESETS=127;
 const SCALE=8388608;
 
 let midiAccess=null, out=null, inp=null, midiChannel=0;
@@ -214,6 +237,15 @@ function encode7bit(bytes){ // 8-bit -> 7-bit, 3 bytes per 4, big endian
     i+=n;
   }
   return o;
+}
+function decode7bit(b,len){ // inverse of encode7bit
+  const o=[];
+  for(let i=0;i+3<b.length;i+=4){
+    o.push(((b[i]&0x07)<<5)|((b[i+1]&0x7C)>>2));
+    o.push(((b[i+1]&0x03)<<6)|((b[i+2]&0x7E)>>1));
+    o.push(((b[i+2]&0x01)<<7)|(b[i+3]&0x7F));
+  }
+  return o.slice(0,len);
 }
 function setProgramName(prog,name){
   const b=new TextEncoder().encode(name.slice(0,15));
@@ -294,61 +326,15 @@ function fmt(p,v){
   }
 }
 
-/* ─────────────────────────── characters ───────────────────────────
-   Each character biases the roll. `r` = ranges for continuous params,
-   `modes` = allowed mode values, `pick` = allowed values for indexed
-   params, `divs` = 'off' | 'rare' | 'musical'.
+/* ─────────────────────────── ranges ───────────────────────────
+   Where a roll starts before `sanity` pulls it in. Everything is wide open:
+   sanity, the constraint row and the locks are what narrow it.
 ------------------------------------------------------------------- */
-const BASE={
-  blend:[0.35,1], feedback:[0,1], fdbkTone:[0.25,1], chop:[0,1], density:[0,1],
-  freeze:[0,0], delayTime:[0,1], delayRnd:[0,1], direction:[0,1], pitch:[0,1],
-  detune:[0,1], pitchRnd:[0,1], lfoRate:[0.46,0.54], pan:[0.4,0.6], spread:[0,1]
-};
-const CHARACTERS={
-  chaos:{label:'Full chaos', blurb:'all 8 modes, every feedback mode, divisions mostly off. The widest net.', modes:[0,1,2,3,4,5,6,7], divs:'rare',
-    r:{lfoRate:[0,1], freeze:[0,0.25], fdbkTone:[0,1]}},
-
-  ambient:{label:'Ambient wash', blurb:'long grains, dense overlap, post-delay feedback and quantized intervals. Pads and swells.', modes:[0,2,7], divs:'off',
-    r:{blend:[0.4,0.8], feedback:[0.45,0.85], fdbkTone:[0.4,0.95], chop:[0.45,0.95],
-       density:[0.5,1], delayTime:[0.2,0.75], direction:[0.85,1], detune:[0.08,0.5],
-       pitchRnd:[0,0.35], spread:[0.4,1], pan:[0.45,0.55]},
-    pick:{fdbkMode:[2,3,2,3,10], pitchQnt:[4,5,6,1], freezeMode:[0]}},
-
-  glitch:{label:'Glitch / stutter', blurb:'short grains, heavy delay randomization, the Repeat #/% feedback modes, note-locked slicing.', modes:[3,4,5,7], divs:'musical',
-    r:{blend:[0.5,1], feedback:[0.2,0.65], chop:[0,0.3], density:[0.1,0.6],
-       delayRnd:[0.35,1], delayTime:[0.1,0.7], direction:[0.3,1], spread:[0.2,1]},
-    pick:{fdbkMode:[4,5,6,7,8,9], freezeMode:[0]}},
-
-  reverse:{label:'Reverse', blurb:'Delay + Rev only. Grains play backwards, delay and chop locked to note divisions.', modes:[5], divs:'musical',
-    r:{blend:[0.45,0.9], feedback:[0.15,0.6], chop:[0.25,0.7], delayTime:[0.25,0.85],
-       direction:[0,0.35], detune:[0,0.2], pitchRnd:[0,0.2]},
-    pick:{fdbkMode:[10,0,2], freezeMode:[0]}},
-
-  stretch:{label:'Time stretch', blurb:'Delay + LFO only. The LFO sweeps the buffer for time stretch, compression and skip.', modes:[6], divs:'off',
-    r:{blend:[0.5,1], feedback:[0.1,0.5], chop:[0.05,0.6], delayTime:[0.4,1],
-       direction:[0.7,1], lfoRate:[0,1]},
-    pick:{fdbkMode:[10,2,0], freezeMode:[0]}},
-
-  cloud:{label:'Pitch cloud', blurb:'Pitch + Detune only. Detuned grains stacked into clouds, wide stereo, quantized intervals.', modes:[2], divs:'off',
-    r:{blend:[0.4,0.85], feedback:[0.4,0.85], chop:[0.3,0.8], density:[0.4,1],
-       detune:[0.3,0.95], pitch:[0.35,0.65], spread:[0.5,1], direction:[0.9,1]},
-    pick:{fdbkMode:[2,3,0,1], pitchQnt:[1,4,5,6], freezeMode:[0]}},
-
-  shimmer:{label:'Shimmer / organ', blurb:'octave-up pitch through recycling feedback, long grains, high density. Organ and shimmer.', modes:[0,2], divs:'off',
-    r:{blend:[0.4,0.8], feedback:[0.5,0.9], fdbkTone:[0.5,1], chop:[0.4,0.9],
-       density:[0.5,1], detune:[0,0.3], pitch:[0.7,0.98], direction:[0.9,1], spread:[0.3,0.9]},
-    pick:{fdbkMode:[0,1,10], pitchQnt:[2,4], freezeMode:[0]}},
-
-  rhythmic:{label:'Tempo-synced', blurb:'everything locked to the tap tempo grid — delay and chop on related note divisions.', modes:[3,4,5,7], divs:'musical',
-    r:{blend:[0.45,0.95], feedback:[0.2,0.7], chop:[0.05,0.5], density:[0.2,0.9],
-       delayRnd:[0,0.7], direction:[0.2,1], spread:[0.2,0.9]},
-    pick:{fdbkMode:[10,2,3,4,5,9], freezeMode:[0]}},
-
-  broken:{label:'Broken tape', blurb:'Delay + Rnd only. Short grains jumping randomly through a dark, filtered delay buffer.', modes:[3], divs:'rare',
-    r:{blend:[0.45,0.95], feedback:[0.3,0.75], fdbkTone:[0.1,0.5], chop:[0.02,0.35],
-       delayRnd:[0.5,1], delayTime:[0.3,1], detune:[0,0.25], direction:[0.5,1]},
-    pick:{fdbkMode:[10,0,2,9], freezeMode:[0,1]}},
-};
+const BLEND_FLOOR=0.01;   // 0% blend is 100% dry — the roll would be inaudible
+const WIDE={};
+PARAMS.filter(p=>p.type==='cont').forEach(p=>WIDE[p.k]=[0,1]);
+WIDE.blend=[BLEND_FLOOR,1];   // never inaudible
+WIDE.freeze=[0,0.25];         // 'allow freeze / drone' opens this to [0,1]
 
 /* ─────────────────────────── musicality ───────────────────────────
    Ranges each parameter has to stay inside to sound intentional rather than
@@ -400,7 +386,6 @@ const MUSICAL_QNT=[1,4,5,6];          // drop Free — continuous shift lands be
 const DIV_BASE=[13,15,16,17,18,19];   // 1/2 … 1/8, sensible delay divisions
 
 /* ─────────────────────────── the roll ─────────────────────────── */
-const BLEND_FLOOR=0.01;   // 0% blend is 100% dry — the roll is inaudible
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -427,9 +412,11 @@ const semiToVal=s=>(s/12+1)/2;
 
 /* Decisions that span several parameters — mode, and note divisions that have to
    relate to each other — are made once per roll, before the per-parameter pass. */
-function rollPlan(ch,c){
+function rollPlan(c){
   const t=c.noLimits?0:c.sanity;
-  const mode = c.noLimits ? pick(MODES.map(o=>o[0])) : pick(ch.modes);
+  /* If Mode is locked the roll keeps the current one — and the signature set has to
+     follow it, or neutralisation would target the wrong parameters. */
+  const mode = locks.mode ? state.mode : pick(MODES.map(o=>o[0]));
   let divs=null;
   if(Math.random()<curves(t).S){
     /* Independent random divisions on delay/chop/density give polyrhythmic mush.
@@ -445,7 +432,7 @@ function rollPlan(ch,c){
   return {mode, divs, sig:SIGNATURE[mode]||[], t};
 }
 
-function rollValue(p,ch,c,plan){
+function rollValue(p,c,plan){
   const all=p.opts?p.opts.map(o=>o[0]):null;
   const t=plan?plan.t:(c.noLimits?0:c.sanity);
   const sig=plan?plan.sig:[];
@@ -459,14 +446,14 @@ function rollValue(p,ch,c,plan){
   }
 
   if(p.type==='idx'){
-    if(p.k==='mode') return plan?plan.mode:(c.noLimits?pick(all):pick(ch.modes));
+    if(p.k==='mode') return plan?plan.mode:pick(all);
     if(c.noLimits) return pick(all);
     if(p.k.endsWith('Div')){
       if(plan&&plan.divs) return plan.divs[p.k];
-      return rollDiv(c.forceSync?'musical':(ch.divs||'off'), all);
+      return rollDiv(c.forceSync?'musical':'rare', all);
     }
     const cv=curves(t);
-    let list=(ch.pick&&ch.pick[p.k]) || all;
+    let list=all;
     if(p.k==='pitchQnt'   && Math.random()<cv.M) list=MUSICAL_QNT;
     if(p.k==='fdbkMode'   && Math.random()<cv.S) list=MUSICAL_FDBK;
     if(p.k==='freezeMode' && Math.random()<cv.S) list=[0];
@@ -477,7 +464,7 @@ function rollValue(p,ch,c,plan){
      everywhere, NO LIMITS included; this is the one bound that isn't about taste. */
   if(c.noLimits) return p.k==='blend' ? Math.max(BLEND_FLOOR,Math.random()) : Math.random();
 
-  let [a,b]=(ch.r&&ch.r[p.k]) || BASE[p.k] || [0,1];
+  let [a,b]=WIDE[p.k] || [0,1];
   if(p.k==='freeze' && c.freeze) [a,b]=[0,1];
 
   /* Pull the range toward the musical one — or toward the wider "this is what the
@@ -503,25 +490,25 @@ function rollValue(p,ch,c,plan){
 }
 
 function randomize(){
-  const ch=CHARACTERS[document.getElementById('character').value], c=constraints();
-  const plan=rollPlan(ch,c);
+  const c=constraints();
+  const plan=rollPlan(c);
   PARAMS.forEach(p=>{
     if(locks[p.k]) return;
     if(p.v22 && !c.v22) return;
-    state[p.k]=rollValue(p,ch,c,plan);
+    state[p.k]=rollValue(p,c,plan);
   });
-  commit('roll · '+ch.label+(c.noLimits?' · no limits':' · sanity '+Math.round(c.sanity*100)+'%'));
+  commit('roll · '+(c.noLimits?'no limits':'sanity '+Math.round(c.sanity*100)+'%'));
 }
 
 function mutate(){
-  const ch=CHARACTERS[document.getElementById('character').value], c=constraints();
+  const c=constraints();
   const amt=+document.getElementById('amount').value/100;
   const sig=SIGNATURE[state.mode]||[];
   PARAMS.forEach(p=>{
     if(locks[p.k]) return;
     if(p.v22 && !c.v22) return;
     if(p.type==='cont'){
-      let [a,b]=c.noLimits ? [0,1] : ((ch.r&&ch.r[p.k]) || BASE[p.k] || [0,1]);
+      let [a,b]=c.noLimits ? [0,1] : (WIDE[p.k] || [0,1]);
       if(!c.noLimits && p.k==='freeze' && c.freeze) [a,b]=[0,1];
       if(!c.noLimits && c.sanity>0 && !(p.k==='freeze'&&c.freeze)){
         const tgt = sig.includes(p.k) ? (SIGNATURE_RANGE[p.k]||MUSICAL[p.k]) : MUSICAL[p.k];
@@ -537,7 +524,7 @@ function mutate(){
       state[p.k]=clamp(v, p.k==='blend'?BLEND_FLOOR:0, 1);
     } else if(p.k!=='mode' && Math.random()<amt*0.6){
       /* Mode is held: changing it is a different sound, not a nudge. */
-      state[p.k]=rollValue(p,ch,c,{mode:state.mode,divs:null,sig,t:c.sanity});
+      state[p.k]=rollValue(p,c,{mode:state.mode,divs:null,sig,t:c.sanity});
     }
   });
   commit('mutate '+Math.round(amt*100)+'%');
@@ -575,6 +562,7 @@ function goto(i){
 
 /* ─────────────────────────── UI ─────────────────────────── */
 const rows={};
+let describe=()=>{};   // assigned in init(); buildUI's handlers call it
 function buildUI(){
   const host=document.getElementById('params');
   const groups=[...new Set(PARAMS.map(p=>p.g))];
@@ -586,7 +574,7 @@ function buildUI(){
       const row=document.createElement('div'); row.className='p';
       const lk=document.createElement('button'); lk.className='lk'; lk.textContent='●';
       lk.title='lock '+p.label;
-      lk.onclick=()=>{locks[p.k]=!locks[p.k]; lk.classList.toggle('on',locks[p.k]);};
+      lk.onclick=()=>{locks[p.k]=!locks[p.k]; lk.classList.toggle('on',locks[p.k]); describe();};
       const nm=document.createElement('div'); nm.className='name'; nm.textContent=p.label;
       const val=document.createElement('div'); val.className='val';
       let ctl;
@@ -663,8 +651,10 @@ function useSelected(){
   const ok=!!out;
   document.getElementById('dot').classList.toggle('on',ok);
   document.getElementById('status').textContent=ok?(out.name+(inp?' (in+out)':' (out only)')):'no output';
-  ['sync','pWrite','pName','pLoad'].forEach(i=>document.getElementById(i).disabled=!ok);
-  if(ok){log('using '+out.name); getProp(P_FIRMWARE); getProp(P_MIDI_CHANNEL); syncFromPedal();}
+  ['sync','pScan','pWriteSel'].forEach(i=>document.getElementById(i).disabled=!ok);
+  renderPresets();
+  if(ok){log('using '+out.name); getProp(P_FIRMWARE); getProp(P_MIDI_CHANNEL);
+         syncFromPedal(); setTimeout(scanPresets,900);}
 }
 
 function onMessage(e){
@@ -675,6 +665,28 @@ function onMessage(e){
   const prop=(d[8]<<8)|d[9];
   if(prop===P_FIRMWARE){log('firmware '+d[10]+'.'+d[11]+'.'+d[12]+String.fromCharCode(d[13])); return;}
   if(prop===P_MIDI_CHANNEL){midiChannel=d[10]; log('midi channel '+d[10]); return;}
+  if(prop===P_PROGRAM_VALID){
+    const bank=d[10], prog=d[11], valid=d[12]!==0;
+    if(bank===0){
+      presets[prog]=presets[prog]||{};
+      presets[prog].valid=valid;
+      if(valid) getProp(P_PROGRAM_NAME,[0,prog]);   // only occupied slots have a name
+      else presets[prog].name='';
+      renderPresets();
+    }
+    return;
+  }
+  if(prop===P_PROGRAM_NAME){
+    const bank=d[10], prog=d[11], len=(d[12]<<7)|d[13];
+    if(bank===0 && len>0){
+      const enc=Array.from(d.slice(14, d.length-1));
+      const bytes=new Uint8Array(decode7bit(enc,len));
+      presets[prog]=presets[prog]||{valid:true};
+      presets[prog].name=new TextDecoder().decode(bytes);
+      renderPresets();
+    }
+    return;
+  }
   const p=BY_PROP[prop]; if(!p) return;
   const iv=(d[10]<<21)|(d[11]<<14)|(d[12]<<7)|d[13];
   state[p.k]= (prop&0x2000) ? iv : (p.type==='tog' ? (iv/SCALE>=0.5?1:0) : iv/SCALE);
@@ -686,6 +698,98 @@ function syncFromPedal(){
   setTimeout(()=>{if(history.length===0) commitSilent('synced from pedal');},1200);
 }
 function commitSilent(reason){history.push(snapshot());hIdx=history.length-1;render();log(reason);}
+
+/* ─────────────────────────── pedal presets ───────────────────────────
+   The pedal doesn't dump the whole preset table in one go, so we walk it:
+   ask each slot whether it holds anything, and ask for a name whenever the
+   answer is yes. Spaced out — bursts of SysEx get dropped.
+------------------------------------------------------------------------ */
+const presets={};          // prog -> {valid, name}
+let curPreset=null;        // last slot loaded or written from here
+let scanTimers=[];
+
+function scanPresets(){
+  scanTimers.forEach(clearTimeout); scanTimers=[];
+  for(const k in presets) delete presets[k];
+  renderPresets();
+  let t=0;
+  for(let prog=1;prog<=NUM_PRESETS;prog++){
+    scanTimers.push(setTimeout(()=>getProp(P_PROGRAM_VALID,[0,prog]), t+=40));
+  }
+  log('scanning '+NUM_PRESETS+' preset slots…');
+}
+
+let presetPaint=null;
+/* Coalesced: a scan lands ~130 replies, and repainting 127 rows for each one
+   starves the scan timers. setTimeout rather than rAF so it keeps working when
+   the tab is in the background. */
+function renderPresets(){
+  if(presetPaint) return;
+  presetPaint=setTimeout(()=>{presetPaint=null; paintPresets();},30);
+}
+function paintPresets(){
+  const host=document.getElementById('plist'); if(!host) return;
+  const used=Object.values(presets).filter(p=>p.valid).length;
+  document.getElementById('pCount').textContent = out ? used+' used' : '—';
+  const keep=host.scrollTop;
+  host.innerHTML='';
+  for(let prog=1;prog<=NUM_PRESETS;prog++){
+    const p=presets[prog]||{}, valid=!!p.valid;
+    const row=document.createElement('div');
+    row.className='pr'+(valid?'':' empty')+(curPreset===prog?' cur':'');
+
+    const num=document.createElement('div');
+    num.className='num'; num.textContent=prog;
+    num.title=valid?'Load preset '+prog:'Empty — nothing to load';
+    if(valid) num.onclick=()=>loadPreset(prog);
+    else num.style.cursor='default';
+
+    const nm=document.createElement('div');
+    nm.className='nm'; nm.textContent=valid?(p.name||'(unnamed)'):'empty';
+    nm.title=valid?'Click to rename':'';
+    if(valid) nm.onclick=()=>renamePreset(prog);
+
+    const act=document.createElement('div'); act.className='act';
+    const w=document.createElement('button');
+    w.textContent='write'; w.title='Overwrite slot '+prog+' with the current sound';
+    w.onclick=()=>writePreset(prog);
+    act.append(w);
+
+    row.append(num,nm,act); host.append(row);
+  }
+  host.scrollTop=keep;
+}
+
+function loadPreset(prog){
+  programChange(prog); curPreset=prog;
+  log('load preset '+prog+(presets[prog]&&presets[prog].name?' "'+presets[prog].name+'"':''));
+  renderPresets();
+  setTimeout(syncFromPedal,300);   // pull the loaded values back into the UI
+}
+function writePreset(prog){
+  const existing=presets[prog]&&presets[prog].valid;
+  if(existing && !confirm('Slot '+prog+' holds "'+(presets[prog].name||'unnamed')+
+                          '".\nOverwrite it with the current sound?')) return;
+  setProp(P_SAVE_PRESET,[prog]);
+  curPreset=prog;
+  presets[prog]=presets[prog]||{}; presets[prog].valid=true;
+  log('wrote preset '+prog);
+  const suggested=(presets[prog].name)||fmt(BY_KEY.mode,state.mode);
+  const n=prompt('Name slot '+prog+' (15 chars max, cancel to leave as-is)',suggested);
+  if(n && n.trim()){
+    setTimeout(()=>{setProgramName(prog,n.trim()); presets[prog].name=n.trim().slice(0,15);
+                    renderPresets(); log('named slot '+prog+' "'+n.trim()+'"');},400);
+  }
+  renderPresets();
+}
+function renamePreset(prog){
+  const cur=(presets[prog]&&presets[prog].name)||'';
+  const n=prompt('Rename slot '+prog,cur);
+  if(n===null) return;
+  setProgramName(prog,n.trim());
+  presets[prog].name=n.trim().slice(0,15);
+  renderPresets(); log('renamed slot '+prog+' "'+n.trim()+'"');
+}
 
 /* ─────────────────────────── favourites ─────────────────────────── */
 const FKEY='particle2.favs';
@@ -713,26 +817,26 @@ function renderFavs(){
 
 /* ─────────────────────────── wiring ─────────────────────────── */
 function init(){
-  const csel=document.getElementById('character');
-  Object.entries(CHARACTERS).forEach(([k,v])=>{
-    const o=document.createElement('option'); o.value=k; o.textContent=v.label; csel.append(o);});
-  csel.value='chaos';
-
   const charline=document.getElementById('charline');
-  const describe=()=>{
+  describe=()=>{
+    const lk=PARAMS.filter(p=>locks[p.k]).length;
+    const held=lk?'  <span style="opacity:.7">'+lk+' parameter'+(lk>1?'s':'')+' locked'+
+      (locks.mode?' — Mode held at '+fmt(BY_KEY.mode,state.mode):'')+'.</span>':
+      '  <span style="opacity:.7">Lock a parameter to hold it across rolls — locking Mode is how you '+
+      'stay in one kind of sound.</span>';
     if(document.getElementById('cNoLimits').checked){
-      charline.innerHTML='<strong style="color:var(--accent)">NO LIMITS</strong> — character and sanity ignored.';
+      charline.innerHTML='<strong style="color:var(--accent)">NO LIMITS</strong> — '+
+        'every parameter rolls across its whole range, sanity ignored.'+held;
       return;
     }
-    const c=CHARACTERS[csel.value], s=+document.getElementById('sanity').value;
-    charline.innerHTML='<strong>'+c.label+'</strong> — '+c.blurb+
-      '  <span style="opacity:.7">sanity '+s+'%: '+
-      (s>=80?'stays inside musical bounds':s>=50?'usable, but loose':'wild — expect broken sounds')+
-      '.</span>';
+    const s=+document.getElementById('sanity').value;
+    charline.innerHTML='<strong>sanity '+s+'%</strong> — '+
+      (s>=80?'rolls stay inside musical bounds':
+       s>=50?'usable, but loose — expect some odd ones':
+             'wild, expect broken sounds')+'.'+held;
   };
-  csel.onchange=describe;
 
-  buildUI(); render(); renderFavs();
+  buildUI(); render(); renderFavs(); renderPresets();
 
   document.getElementById('connect').onclick=connect;
   document.getElementById('devsel').onchange=useSelected;
@@ -743,11 +847,11 @@ function init(){
   document.getElementById('redo').onclick=()=>goto(hIdx+1);
   document.getElementById('panic').onclick=()=>{state.blend=0.5;state.feedback=0;state.freeze=0;
     render();setParam(0,0.5);setParam(3,0);setParam(2,0);log('panic');};
-  document.getElementById('lockAll').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=true);render();};
-  document.getElementById('lockNone').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=false);render();};
+  document.getElementById('lockAll').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=true);render();describe();};
+  document.getElementById('lockNone').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=false);render();describe();};
 
   const nl=document.getElementById('cNoLimits');
-  const overridden=['cBlend','cFdbk','cFreeze','cSnap','cSync','character','sanity'];
+  const overridden=['cBlend','cFdbk','cFreeze','cSnap','cSync','sanity'];
   nl.onchange=()=>{
     overridden.forEach(i=>{const el=document.getElementById(i);
       el.disabled=nl.checked; el.closest('label,.inl')?.style.setProperty('opacity',nl.checked?'.4':'1');});
@@ -763,23 +867,15 @@ function init(){
 
   document.getElementById('keep').onclick=()=>{
     const n=prompt('Name this sound',
-      CHARACTERS[csel.value].label+' '+new Date().toLocaleTimeString());
+      fmt(BY_KEY.mode,state.mode)+' '+new Date().toLocaleTimeString());
     if(!n) return;
     const a=favs(); a.unshift({name:n,v:snapshot(),ts:Date.now()}); saveFavs(a);};
 
-  document.getElementById('pWrite').onclick=()=>{
-    const s=+document.getElementById('slot').value;
-    if(!(s>=1&&s<=127)) return;
-    if(!confirm('Overwrite preset slot '+s+' on the pedal?')) return;
-    setProp(P_SAVE_PRESET,[s]); log('wrote preset '+s);
-    const n=document.getElementById('pname').value.trim();
-    if(n) setTimeout(()=>{setProgramName(s,n); log('named preset '+s+' "'+n+'"');},400);};
-  document.getElementById('pName').onclick=()=>{
-    const s=+document.getElementById('slot').value, n=document.getElementById('pname').value.trim();
-    if(n) {setProgramName(s,n); log('renamed preset '+s);}};
-  document.getElementById('pLoad').onclick=()=>{
-    const s=+document.getElementById('slot').value;
-    programChange(s); log('program change '+s); setTimeout(syncFromPedal,300);};
+  document.getElementById('pScan').onclick=scanPresets;
+  document.getElementById('pWriteSel').onclick=()=>{
+    const p=curPreset||1;
+    writePreset(p);
+  };
 
   document.getElementById('favExport').onclick=()=>{
     const b=new Blob([JSON.stringify(favs(),null,2)],{type:'application/json'});

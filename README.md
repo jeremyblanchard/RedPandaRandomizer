@@ -6,7 +6,8 @@ dependencies, no build step.
 
 The point is to find sounds you wouldn't have dialled in yourself — but *usable* ones.
 A `sanity` control keeps rolls inside bounds derived from the pedal's own manual, and
-a `NO LIMITS` switch throws that away when you want it.
+a `NO LIMITS` switch throws that away when you want it. Presets on the pedal are listed
+in a sidebar you can load, name and overwrite from.
 
 > **Not affiliated with, endorsed by, or supported by Red Panda.** Particle is their
 > trademark. This is an independent tool built by reverse-engineering the SysEx
@@ -38,7 +39,6 @@ gets confusing, though it won't break anything.
 | **Mutate** (`m`) | *Keep* the current sound and nudge every unlocked parameter by `by`. Mode is held |
 | **by** | How far Mutate moves things. Has no effect on Randomize |
 | **sanity** | How hard to keep the roll inside usable territory — see below |
-| **character** | Biases the roll — see below |
 | **history ◀ ▶** (`[` `]`) | Walk back through every roll this session and forward again |
 | **★ Keep** | Save the current sound to browser storage, recall it later |
 | **lock** (square left of each row) | That parameter is never touched by Randomize/Mutate |
@@ -53,8 +53,8 @@ leaves Mode alone. Randomize to find a neighbourhood, Mutate to search inside it
 
 ### The intended loop
 
-1. Pick a **character** and hit **Randomize** (or tap `Space`) repeatedly while playing.
-   Every roll goes straight to the pedal, so you hear each one immediately.
+1. Hit **Randomize** (or tap `Space`) repeatedly while playing. Every roll goes straight
+   to the pedal, so you hear each one immediately.
 2. Something catches your ear — hit **★ Keep** before you roll past it.
 3. Roll a few more. Went one too far? **history ◀** walks back through everything you
    rolled this session and **▶** walks forward again, so a sound is never lost to an
@@ -63,9 +63,13 @@ leaves Mode alone. Randomize to find a neighbourhood, Mutate to search inside it
    row — and hit **Mutate** to jiggle only the rest by *amount*.
 5. Keeper? **Write to pedal** puts it in a preset slot with a name.
 
-Locks are the main tool for steering. Lock Mode and Delay Time and you're auditioning
-grain and pitch behaviour against a fixed rhythmic bed; lock everything but Pitch and
-Detune and you're auditioning harmony.
+**Locks are how you steer.** Lock Mode and every roll stays in one kind of sound —
+lock it to Delay + Rev and you get nothing but reverse patches. Lock Mode *and* Delay
+Time and you're auditioning grain and pitch behaviour over a fixed rhythmic bed; lock
+everything except Pitch and Detune and you're auditioning harmony.
+
+Locking Mode also redirects the neutralisation described below, so the roll stays built
+around the mode you pinned rather than one it picked at random.
 
 ### The `sanity` slider
 
@@ -111,6 +115,11 @@ pitch intervals, 25 division pairings and 5 feedback modes.
 
 At 0 it behaves as it did before. **NO LIMITS** overrides it entirely.
 
+There was a `character` dropdown here (Ambient, Glitch, Reverse …). It is gone: sanity
+lerps every range toward the musical one, so at any usable sanity setting almost nothing
+of a character survived except which modes it allowed — and locking Mode does that more
+directly.
+
 ### Sanity ranges
 
 The bounds the slider pulls toward, and why:
@@ -132,30 +141,6 @@ The bounds the slider pulls toward, and why:
 | Pan / Spread | near centre / 15–65% | full ping-pong on every grain is exhausting |
 | Fdbk Mode | Auto, Post Delay, ±PP, Recycle, ±PP | the Repeat #/% family is inherently stuttery |
 | Pitch Qnt | Semitones, 5th & Octave, Intervals, ±Inv | Free lands between notes |
-
-### Characters
-
-`character` picks which corner of the pedal to roll in. It's the coarse control:
-pick the neighbourhood, then hit Randomize until something in it grabs you. The line
-under the toolbar always says what the selected one does.
-
-| | |
-|---|---|
-| **Full chaos** | all 8 modes, every feedback mode, divisions mostly off. The widest net. |
-| **Ambient wash** | long grains, dense overlap, post-delay feedback, quantized intervals |
-| **Glitch / stutter** | short grains, heavy delay randomization, the Repeat #/% feedback modes |
-| **Reverse** | Delay + Rev only. Grains play backwards, delay and chop note-locked |
-| **Time stretch** | Delay + LFO only. The LFO sweeps the buffer for stretch, compression, skip |
-| **Pitch cloud** | Pitch + Detune only. Detuned grains stacked into clouds, wide stereo |
-| **Shimmer / organ** | octave-up pitch through recycling feedback, long grains, high density |
-| **Tempo-synced** | everything on the tap tempo grid, delay and chop on related divisions |
-| **Broken tape** | Delay + Rnd only. Short grains jumping through a dark, filtered buffer |
-
-Each one constrains mode choice, parameter ranges, feedback mode and note divisions to
-the region of the parameter space that actually produces that sound. Ranges came from
-the Particle 2 manual's parameter descriptions — e.g. *Glitch* forces short grains,
-high delay randomization and the `Repeat # / %` feedback modes; *Ambient* forces long
-grains, high density, post-delay feedback and quantized pitch intervals.
 
 ### Constraints
 
@@ -189,9 +174,22 @@ grains, high density, post-delay feedback and quantized pitch intervals.
 
 ### Presets
 
-`Write to pedal` saves the pedal's current edit buffer — i.e. the sound you just
-rolled — into slots 1–127, optionally with a name. Slots 1–4 are the front-panel ones.
-MIDI program 128 returns to live knob settings.
+The sidebar lists all 127 pedal slots, the way the official editor's Preset tab does.
+On connect it walks the pedal asking each slot whether it holds anything, then asks for
+a name for the ones that do — so the list shows real names, not just numbers.
+
+- **click a number** to load that preset (program change), which also pulls its values
+  back into the parameter list
+- **click a name** to rename it in the pedal's flash
+- **write** on any row overwrites that slot with the current sound and offers to name it
+- **Refresh** re-walks the pedal, e.g. after saving presets from the front panel
+
+Slots 1–4 are the front-panel presets; MIDI program 128 returns to live knob settings.
+Overwriting an occupied slot asks first, and names it back to you so you know what
+you're about to lose.
+
+Kept sounds sit below, and are a different thing: browser-local snapshots that never
+touch the pedal, for auditioning without spending a slot.
 
 ## Notes on how it drives the pedal
 
