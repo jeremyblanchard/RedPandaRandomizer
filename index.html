@@ -143,9 +143,9 @@
     <span class="spacer"></span>
 
     <div class="grp"><span class="glab">this sound</span>
-      <button id="keep" title="Add this sound to the Kept list in the sidebar. Stored in this browser only — use a preset row's write button to put it on the pedal.">★&nbsp; Keep</button>
-      <button id="panic"
-        title="Runaway feedback, stuck freeze, or too wet to hear yourself? Sets blend 50%, feedback 0, freeze 0 and leaves every other parameter alone. Undo with history.">⛑&nbsp; Rescue</button>
+      <button id="keep" title="Add this sound to the Bookmarks list in the sidebar. Stored in this browser only — use a preset row's write button to put it on the pedal.">★&nbsp; Bookmark</button>
+      <button id="mute"
+        title="Bypass the pedal — CC 81. Nothing about the sound is changed, so unmuting brings it straight back.">⏻&nbsp; Mute</button>
     </div>
   </div>
   <div class="bar" style="margin-top:7px">
@@ -209,7 +209,7 @@
   </fieldset>
 
   <fieldset>
-    <legend>Kept sounds — this browser <span id="favcount" class="chip"></span></legend>
+    <legend>Bookmarks — this browser <span id="favcount" class="chip"></span></legend>
     <div id="favs"></div>
     <div class="bar" style="margin-top:8px;gap:6px">
       <button id="favExport" class="ghost" title="Download the kept sounds as a JSON file">↥ Export</button>
@@ -265,6 +265,29 @@ function enc24(v){return [(v>>21)&0x7F,(v>>14)&0x7F,(v>>7)&0x7F,v&0x7F];}
 function setParam(propId,v01){setProp(propId,enc24(Math.trunc(SCALE*Math.max(0,Math.min(1,v01)))));}
 function setIndexed(propId,i){setProp(propId,enc24(i|0));}
 function programChange(prog){send([0xC0+midiChannel,prog]);}
+function controlChange(cc,val){send([0xB0+midiChannel,cc,val]);}
+
+/* CC 81 engages/bypasses the effect (0-63 bypass, 64-127 on). Bypassing changes
+   nothing about the sound, so unmuting brings the same patch straight back. */
+const CC_EFFECT_ON=81, CC_EFFECT_ON_RX=88;
+let effectOn=true;
+function setBypass(bypass){
+  effectOn=!bypass;
+  controlChange(CC_EFFECT_ON, bypass?0:127);
+  log(bypass?'muted — pedal bypassed':'unmuted — effect engaged');
+  renderBypass();
+}
+function renderBypass(){
+  const b=document.getElementById('mute'); if(!b) return;
+  b.innerHTML = effectOn ? '⏻&nbsp; Mute' : '⏻&nbsp; Muted';
+  b.style.background = effectOn?'':'var(--accent)';
+  b.style.borderColor = effectOn?'':'var(--accent)';
+  b.style.color = effectOn?'':'#160b06';
+  b.style.fontWeight = effectOn?'':'700';
+  b.title = effectOn ? 'Bypass the pedal — CC 81. Nothing about the sound is changed, '+
+                       'so unmuting brings it straight back.'
+                     : 'Pedal is bypassed. Click to engage the effect again.';
+}
 
 function encode7bit(bytes){ // 8-bit -> 7-bit, 3 bytes per 4, big endian
   const o=[];
@@ -738,6 +761,15 @@ function useSelected(){
 
 function onMessage(e){
   const d=e.data;
+  /* The pedal reports its own bypass state on CC 88 when you use the footswitch,
+     so the Mute button follows the pedal instead of drifting out of sync. */
+  if((d[0]&0xF0)===0xB0 && d.length===3 && (d[0]&0x0F)===midiChannel){
+    if(d[1]===CC_EFFECT_ON_RX || d[1]===CC_EFFECT_ON){
+      effectOn = d[2]>=64; renderBypass();
+      log(effectOn?'pedal engaged (from pedal)':'pedal bypassed (from pedal)');
+    }
+    return;
+  }
   if(d[0]!==SYSEX_START) return;
   if(!(d[1]===RPL[0]&&d[2]===RPL[1]&&d[3]===RPL[2]&&d[4]===FAMILY&&d[5]===PRODUCT&&d[6]===MSGVER)) return;
   if(d[7]!==MSG_REPLY) return;
@@ -896,7 +928,7 @@ function renderFavs(){
   const host=document.getElementById('favs'), a=favs();
   document.getElementById('favcount').textContent=a.length+' saved';
   host.innerHTML='';
-  if(!a.length){host.innerHTML='<p class="hint">Nothing kept yet. ★ Keep bookmarks a sound here without using up one of the pedal\'s 127 preset slots.</p>';return;}
+  if(!a.length){host.innerHTML='<p class="hint">No bookmarks yet. ★ Bookmark stores a sound here without using up one of the pedal\'s 127 preset slots.</p>';return;}
   a.forEach((f,i)=>{
     const el=document.createElement('div'); el.className='fav';
     const nm=document.createElement('div'); nm.className='fname'; nm.textContent=f.name;
@@ -933,7 +965,7 @@ function init(){
              'wild, expect broken sounds')+'.'+held;
   };
 
-  buildUI(); render(); renderFavs(); renderPresets();
+  buildUI(); render(); renderFavs(); renderPresets(); renderBypass();
 
   document.getElementById('connect').onclick=connect;
   document.getElementById('devsel').onchange=useSelected;
@@ -942,8 +974,7 @@ function init(){
   document.getElementById('mutate').onclick=mutate;
   document.getElementById('undo').onclick=()=>goto(hIdx-1);
   document.getElementById('redo').onclick=()=>goto(hIdx+1);
-  document.getElementById('panic').onclick=()=>{state.blend=0.5;state.feedback=0;state.freeze=0;
-    render();setParam(0,0.5);setParam(3,0);setParam(2,0);log('rescue — blend 50%, feedback 0, freeze 0');};
+  document.getElementById('mute').onclick=()=>setBypass(effectOn);
   document.getElementById('lockAll').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=true);render();describe();};
   document.getElementById('lockNone').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=false);render();describe();};
 
@@ -963,7 +994,7 @@ function init(){
     const u=()=>{o.textContent=r.value+s; if(a==='sanity') describe();}; r.oninput=u; u();});
 
   document.getElementById('keep').onclick=()=>{
-    const n=prompt('Name this sound',
+    const n=prompt('Bookmark this sound as',
       fmt(BY_KEY.mode,state.mode)+' '+new Date().toLocaleTimeString());
     if(!n) return;
     const a=favs(); a.unshift({name:n,v:snapshot(),ts:Date.now()}); saveFavs(a);};
