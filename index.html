@@ -26,13 +26,18 @@
   .pr:hover{background:#ffffff0a}
   .pr.empty .nm{font-style:italic;color:#5c6675}
   .pr.cur{background:#ff6b3d1c;box-shadow:inset 2px 0 0 var(--accent)}
-  .pr .num{font-family:var(--mono);font-size:11px;color:var(--dim);text-align:right;
-           cursor:pointer;padding:3px 1px;border-radius:3px}
-  .pr .num:hover{background:var(--accent);color:#160b06}
-  .pr .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:text;
+  .pr.live{border-bottom:1px solid var(--line);padding-bottom:4px;margin-bottom:4px}
+  .pr.live .num{width:auto;padding:2px 6px;font-size:10px;letter-spacing:.06em}
+  .pr .num{font-family:var(--mono);font-size:11px;padding:2px 0;width:26px;
+           border-radius:4px;background:var(--panel2);border:1px solid var(--line);
+           color:var(--ink);cursor:pointer;text-align:center}
+  .pr .num:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:#160b06}
+  .pr .num:disabled{background:transparent;border-color:transparent;color:#4c5563;cursor:default}
+  .pr .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;
           padding:3px 4px;border-radius:4px}
-  .pr .nm:hover{background:#ffffff12}
-  .pr .act{display:flex;gap:3px;opacity:0;transition:opacity .1s}
+  .pr:not(.empty) .nm:hover{background:#ffffff12}
+  .pr.empty .nm{cursor:default}
+  .pr .act{display:flex;gap:3px;opacity:.4;transition:opacity .1s}
   .pr:hover .act{opacity:1}
   .pr .act button{padding:1px 6px;font-size:11px;border-radius:4px}
   h1{font-size:15px;margin:0;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
@@ -162,13 +167,15 @@
     <legend>Presets on the pedal</legend>
     <div class="bar" style="gap:6px;margin-bottom:8px">
       <button id="pScan" disabled title="Read every slot and its name off the pedal">Refresh</button>
-      <button id="pWriteSel" disabled title="Write the current sound into the selected slot">Write here</button>
       <span class="spacer"></span>
       <span class="chip" id="pCount">—</span>
     </div>
+    <p class="hint" style="font-size:11.5px"><strong>Click a slot to load it</strong> — the
+       number or the name. <strong>✎</strong> renames, <strong>write</strong> saves the current
+       sound there. Presets 1–4 are the front-panel ones; <em>live</em> returns to the
+       knob settings. Preset <em>n</em> is MIDI program <em>n−1</em> — the pedal counts
+       programs from zero.</p>
     <div class="plist" id="plist"></div>
-    <p class="hint" style="font-size:11.5px">Click the number to load a slot, the name to rename it.
-       Slots 1–4 are the front-panel presets; program 128 returns to the live knobs.</p>
   </fieldset>
 
   <fieldset>
@@ -201,7 +208,11 @@ const RPL=[0x00,0x02,0x23], FAMILY=0x01, PRODUCT=0x01, MSGVER=0x00;
 const MSG_GET=0x34, MSG_REPLY=0x35, MSG_SET=0x36;
 const P_FIRMWARE=0x7F01, P_SAVE_PRESET=0x7F13, P_PROGRAM_NAME=0x7F1C, P_MIDI_CHANNEL=0x7F12;
 const P_PROGRAM_VALID=0x7F1A;
-const NUM_PRESETS=127;
+/* Wire program numbers are 0-based: 0…126 are the 127 presets and 127 is the live
+   knob buffer. The pedal's front panel, the manual and this UI all count presets from
+   1, so display number = wire number + 1 (and the manual's "MIDI program 128" = 127). */
+const NUM_PRESETS=127;      // presets, wire 0…126
+const LIVE_PROG=127;        // wire number of the live knob settings
 const SCALE=8388608;
 
 let midiAccess=null, out=null, inp=null, midiChannel=0;
@@ -651,7 +662,7 @@ function useSelected(){
   const ok=!!out;
   document.getElementById('dot').classList.toggle('on',ok);
   document.getElementById('status').textContent=ok?(out.name+(inp?' (in+out)':' (out only)')):'no output';
-  ['sync','pScan','pWriteSel'].forEach(i=>document.getElementById(i).disabled=!ok);
+  ['sync','pScan'].forEach(i=>document.getElementById(i).disabled=!ok);
   renderPresets();
   if(ok){log('using '+out.name); getProp(P_FIRMWARE); getProp(P_MIDI_CHANNEL);
          syncFromPedal(); setTimeout(scanPresets,900);}
@@ -713,8 +724,8 @@ function scanPresets(){
   for(const k in presets) delete presets[k];
   renderPresets();
   let t=0;
-  for(let prog=1;prog<=NUM_PRESETS;prog++){
-    scanTimers.push(setTimeout(()=>getProp(P_PROGRAM_VALID,[0,prog]), t+=40));
+  for(let w=0;w<NUM_PRESETS;w++){
+    scanTimers.push(setTimeout(()=>getProp(P_PROGRAM_VALID,[0,w]), t+=40));
   }
   log('scanning '+NUM_PRESETS+' preset slots…');
 }
@@ -733,62 +744,80 @@ function paintPresets(){
   document.getElementById('pCount').textContent = out ? used+' used' : '—';
   const keep=host.scrollTop;
   host.innerHTML='';
-  for(let prog=1;prog<=NUM_PRESETS;prog++){
-    const p=presets[prog]||{}, valid=!!p.valid;
+  /* `w` is the wire program number the pedal uses; `w+1` is what the front panel,
+     the manual and this list call it. Every SysEx call below takes the wire number. */
+  const mkRow=(w,live)=>{
+    const label = live ? 'live' : String(w+1);
+    const p=presets[w]||{}, valid=live||!!p.valid;
     const row=document.createElement('div');
-    row.className='pr'+(valid?'':' empty')+(curPreset===prog?' cur':'');
+    row.className='pr'+(valid?'':' empty')+(curPreset===w?' cur':'')+(live?' live':'');
 
-    const num=document.createElement('div');
-    num.className='num'; num.textContent=prog;
-    num.title=valid?'Load preset '+prog:'Empty — nothing to load';
-    if(valid) num.onclick=()=>loadPreset(prog);
-    else num.style.cursor='default';
+    /* A real button, always looking like one — the number used to be dim text that
+       only revealed itself on hover, and nobody could tell it loaded the preset. */
+    const num=document.createElement('button');
+    num.className='num'; num.textContent=label; num.disabled=!valid;
+    num.title=live?'Return to the live knob settings (MIDI program 128)'
+             :valid?'Load preset '+(w+1)+' — MIDI program '+w
+                   :'Empty slot — nothing to load';
+    if(valid) num.onclick=()=>loadPreset(w,live);
 
     const nm=document.createElement('div');
-    nm.className='nm'; nm.textContent=valid?(p.name||'(unnamed)'):'empty';
-    nm.title=valid?'Click to rename':'';
-    if(valid) nm.onclick=()=>renamePreset(prog);
+    nm.className='nm';
+    nm.textContent=live?'live knob settings':(valid?(p.name||'(unnamed)'):'empty');
+    if(valid){ nm.title=num.title; nm.onclick=()=>loadPreset(w,live); }
 
     const act=document.createElement('div'); act.className='act';
-    const w=document.createElement('button');
-    w.textContent='write'; w.title='Overwrite slot '+prog+' with the current sound';
-    w.onclick=()=>writePreset(prog);
-    act.append(w);
-
+    if(!live){
+      if(valid){
+        const r=document.createElement('button');
+        r.textContent='✎'; r.title='Rename preset '+(w+1);
+        r.onclick=e=>{e.stopPropagation(); renamePreset(w);};
+        act.append(r);
+      }
+      const wr=document.createElement('button');
+      wr.textContent='write';
+      wr.title=(valid?'Overwrite':'Save the current sound into')+' preset '+(w+1);
+      wr.onclick=e=>{e.stopPropagation(); writePreset(w);};
+      act.append(wr);
+    }
     row.append(num,nm,act); host.append(row);
-  }
+  };
+
+  mkRow(LIVE_PROG,true);
+  for(let w=0;w<NUM_PRESETS;w++) mkRow(w,false);
   host.scrollTop=keep;
 }
 
-function loadPreset(prog){
-  programChange(prog); curPreset=prog;
-  log('load preset '+prog+(presets[prog]&&presets[prog].name?' "'+presets[prog].name+'"':''));
+function loadPreset(w,live){
+  programChange(w); curPreset=w;
+  const p=presets[w];
+  log(live?'back to live knob settings'
+          :'load preset '+(w+1)+(p&&p.name?' "'+p.name+'"':'')+' (program '+w+')');
   renderPresets();
   setTimeout(syncFromPedal,300);   // pull the loaded values back into the UI
 }
-function writePreset(prog){
-  const existing=presets[prog]&&presets[prog].valid;
-  if(existing && !confirm('Slot '+prog+' holds "'+(presets[prog].name||'unnamed')+
-                          '".\nOverwrite it with the current sound?')) return;
-  setProp(P_SAVE_PRESET,[prog]);
-  curPreset=prog;
-  presets[prog]=presets[prog]||{}; presets[prog].valid=true;
-  log('wrote preset '+prog);
-  const suggested=(presets[prog].name)||fmt(BY_KEY.mode,state.mode);
-  const n=prompt('Name slot '+prog+' (15 chars max, cancel to leave as-is)',suggested);
+function writePreset(w){
+  const p=presets[w];
+  if(p&&p.valid && !confirm('Preset '+(w+1)+' holds "'+(p.name||'unnamed')+
+                            '".\nOverwrite it with the current sound?')) return;
+  setProp(P_SAVE_PRESET,[w]);
+  curPreset=w;
+  presets[w]=presets[w]||{}; presets[w].valid=true;
+  log('wrote preset '+(w+1)+' (program '+w+')');
+  const n=prompt('Name preset '+(w+1)+' (15 chars max, cancel to leave as-is)',
+                 presets[w].name||fmt(BY_KEY.mode,state.mode));
   if(n && n.trim()){
-    setTimeout(()=>{setProgramName(prog,n.trim()); presets[prog].name=n.trim().slice(0,15);
-                    renderPresets(); log('named slot '+prog+' "'+n.trim()+'"');},400);
+    setTimeout(()=>{setProgramName(w,n.trim()); presets[w].name=n.trim().slice(0,15);
+                    renderPresets(); log('named preset '+(w+1)+' "'+n.trim()+'"');},400);
   }
   renderPresets();
 }
-function renamePreset(prog){
-  const cur=(presets[prog]&&presets[prog].name)||'';
-  const n=prompt('Rename slot '+prog,cur);
+function renamePreset(w){
+  const n=prompt('Rename preset '+(w+1),(presets[w]&&presets[w].name)||'');
   if(n===null) return;
-  setProgramName(prog,n.trim());
-  presets[prog].name=n.trim().slice(0,15);
-  renderPresets(); log('renamed slot '+prog+' "'+n.trim()+'"');
+  setProgramName(w,n.trim());
+  presets[w].name=n.trim().slice(0,15);
+  renderPresets(); log('renamed preset '+(w+1)+' "'+n.trim()+'"');
 }
 
 /* ─────────────────────────── favourites ─────────────────────────── */
@@ -872,10 +901,6 @@ function init(){
     const a=favs(); a.unshift({name:n,v:snapshot(),ts:Date.now()}); saveFavs(a);};
 
   document.getElementById('pScan').onclick=scanPresets;
-  document.getElementById('pWriteSel').onclick=()=>{
-    const p=curPreset||1;
-    writePreset(p);
-  };
 
   document.getElementById('favExport').onclick=()=>{
     const b=new Blob([JSON.stringify(favs(),null,2)],{type:'application/json'});

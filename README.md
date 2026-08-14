@@ -178,15 +178,26 @@ The sidebar lists all 127 pedal slots, the way the official editor's Preset tab 
 On connect it walks the pedal asking each slot whether it holds anything, then asks for
 a name for the ones that do — so the list shows real names, not just numbers.
 
-- **click a number** to load that preset (program change), which also pulls its values
-  back into the parameter list
-- **click a name** to rename it in the pedal's flash
-- **write** on any row overwrites that slot with the current sound and offers to name it
+- **click a slot** — number or name — to load it, which also pulls its values back into
+  the parameter list
+- **✎** renames it in the pedal's flash
+- **write** overwrites that slot with the current sound and offers to name it
 - **Refresh** re-walks the pedal, e.g. after saving presets from the front panel
 
-Slots 1–4 are the front-panel presets; MIDI program 128 returns to live knob settings.
-Overwriting an occupied slot asks first, and names it back to you so you know what
-you're about to lose.
+Presets 1–4 are the front-panel ones. The first row, **live**, returns the pedal to its
+live knob settings. Overwriting an occupied preset asks first, naming what's there so
+you know what you're about to lose.
+
+#### A numbering wrinkle
+
+The pedal counts programs from **zero**: wire program 0 is the first preset, 126 is the
+last, and 127 is the live buffer. The manual and the front panel count presets from
+one, and so does this list — so **preset _n_ is MIDI program _n−1_**, and the manual's
+"MIDI program 128" is wire 127.
+
+The official editor shows the raw 0-based number in its `#` column, which is why its
+first row is `0`. If you are driving the pedal from a MIDI controller, use the program
+number in each row's tooltip rather than the label.
 
 Kept sounds sit below, and are a different thing: browser-local snapshots that never
 touch the pedal, for auditioning without spending a slot.
