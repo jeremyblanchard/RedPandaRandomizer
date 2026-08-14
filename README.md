@@ -189,6 +189,16 @@ a name for the ones that do — so the list shows real names, not just numbers.
 - **✎** renames it in the pedal's flash
 - **write** overwrites that slot with the current sound and offers to name it
 - **Refresh** re-walks the pedal, e.g. after saving presets from the front panel
+- **Backup ZIP** reads every occupied slot and downloads one `.syx` file per preset in
+  a dated ZIP
+- **Restore ZIP** writes all `.syx` files in a backup ZIP to their original slots
+
+The `.syx` files are the pedal's complete preset-data messages, byte-for-byte in the
+format downloaded and accepted by Red Panda's official editor. Filenames begin with the
+1-based slot number so they sort in pedal order. Restore reads the destination from each
+file itself, confirms the affected slots, and spaces out writes to protect the pedal's
+MIDI/flash handling. It overwrites only those slots; presets absent from the backup are
+left alone.
 
 Presets 1–4 are the front-panel ones. The first row, **live**, returns the pedal to its
 live knob settings. Overwriting an occupied preset asks first, naming what's there so
