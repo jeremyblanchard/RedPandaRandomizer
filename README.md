@@ -34,8 +34,9 @@ gets confusing, though it won't break anything.
 
 | | |
 |---|---|
-| **Randomize** (or `Space`) | Roll a whole new sound and send it to the pedal |
-| **Mutate** (`m`) | Nudge the current sound by *amount* instead of replacing it |
+| **Randomize** (`Space`) | Throw away the current sound, roll every unlocked parameter from scratch |
+| **Mutate** (`m`) | *Keep* the current sound and nudge every unlocked parameter by `by`. Mode is held |
+| **by** | How far Mutate moves things. Has no effect on Randomize |
 | **sanity** | How hard to keep the roll inside usable territory — see below |
 | **character** | Biases the roll — see below |
 | **history ◀ ▶** (`[` `]`) | Walk back through every roll this session and forward again |
@@ -45,6 +46,10 @@ gets confusing, though it won't break anything.
 | **Panic** | Blend 50%, feedback 0, freeze 0 |
 
 Any slider or dropdown also works as a plain editor — moving it sends immediately.
+
+Randomize and Mutate are coarse and fine. Measured on the default settings, Randomize
+moves each parameter 36% of its range on average; Mutate at `by` 25% moves it 2.7% and
+leaves Mode alone. Randomize to find a neighbourhood, Mutate to search inside it.
 
 ### The intended loop
 

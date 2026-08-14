@@ -77,9 +77,12 @@
     <button id="sync" disabled title="Ask the pedal for all current values">Sync&nbsp;←&nbsp;Pedal</button>
   </div>
   <div class="bar row2">
-    <button class="primary" id="roll">⚄ Randomize</button>
-    <button id="mutate" title="Nudge the current sound instead of replacing it">Mutate</button>
-    <label class="inl">amount <input type="range" id="amount" min="0" max="100" value="25" style="width:74px"><span class="chip" id="amountv">25%</span></label>
+    <button class="primary" id="roll"
+      title="Throw the current sound away and roll every unlocked parameter from scratch">⚄ Randomize</button>
+    <button id="mutate"
+      title="Keep the current sound and nudge every unlocked parameter by 'by'. Mode is held.">Mutate</button>
+    <label class="inl" title="How far Mutate moves things. Does not affect Randomize."
+      >by <input type="range" id="amount" min="0" max="100" value="25" style="width:74px"><span class="chip" id="amountv">25%</span></label>
     <label class="inl" style="color:var(--accent2);font-weight:600">sanity
       <input type="range" id="sanity" min="0" max="100" value="80" style="width:96px">
       <span class="chip" id="sanityv">80%</span></label>
