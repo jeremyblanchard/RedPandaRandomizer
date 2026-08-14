@@ -36,19 +36,25 @@ gets confusing, though it won't break anything.
 | | |
 |---|---|
 | **Randomize** (`Space`) | Throw away the current sound, roll every unlocked parameter from scratch |
-| **Mutate** (`m`) | *Keep* the current sound and nudge every unlocked parameter by `by`. Mode is held |
-| **by** | How far Mutate moves things. Has no effect on Randomize |
+| **Mutate** (`m`) | *Keep* the current sound and nudge every unlocked parameter by `amount`. Mode is held |
+| **amount** | How far Mutate moves things. Boxed with Mutate because it has no effect on Randomize |
 | **sanity** | How hard to keep the roll inside usable territory — see below |
 | **history ◀ ▶** (`[` `]`) | Walk back through every roll this session and forward again |
 | **★ Keep** | Save the current sound to browser storage, recall it later |
-| **lock** (square left of each row) | That parameter is never touched by Randomize/Mutate |
+| **padlock** (left of each row) | Hold that parameter — Randomize and Mutate leave it alone |
 | **Sync ← Pedal** | Read all current values back off the pedal |
 | **Panic** | Blend 50%, feedback 0, freeze 0 |
 
 Any slider or dropdown also works as a plain editor — moving it sends immediately.
+Hover a parameter name for a description of what it does.
+
+The toolbar is grouped by scope: whatever sits inside a bordered box is what the
+labelled control acts on. `amount` lives in the dashed box with **Mutate** because it
+affects Mutate alone; `sanity` sits in the outer box because it shapes Randomize and
+Mutate alike.
 
 Randomize and Mutate are coarse and fine. Measured on the default settings, Randomize
-moves each parameter 36% of its range on average; Mutate at `by` 25% moves it 2.7% and
+moves each parameter 36% of its range on average; Mutate at `amount` 25% moves it 2.7% and
 leaves Mode alone. Randomize to find a neighbourhood, Mutate to search inside it.
 
 ### The intended loop

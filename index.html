@@ -44,6 +44,15 @@
   h1 small{color:var(--dim);letter-spacing:.02em;text-transform:none;font-weight:400;margin-left:8px}
   .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:1180px;margin:0 auto}
   .bar.row2 select{max-width:150px}
+  /* A control group states its own scope: whatever sits inside the border is what
+     the labelled control acts on. Nested groups narrow it further. */
+  .grp{display:flex;align-items:center;gap:8px;position:relative;
+       border:1px solid var(--line);border-radius:9px;padding:8px 11px;background:#ffffff06}
+  .grp>.glab{position:absolute;top:-7px;left:10px;padding:0 5px;background:#12161b;
+       font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim);
+       white-space:nowrap}
+  .grp.sub{background:#ffffff09;padding:5px 9px;border-style:dashed}
+  .grp.sub>.glab{background:#161a20}
   .bar.row2{margin-top:8px}
   button,select,input[type=text],input[type=number]{
     background:var(--panel2);color:var(--ink);border:1px solid var(--line);
@@ -62,14 +71,20 @@
   fieldset{border:1px solid var(--line);border-radius:9px;margin:16px 0 0;padding:10px 14px 14px;background:var(--panel)}
   legend{color:var(--dim);font-size:11px;letter-spacing:.16em;text-transform:uppercase;padding:0 6px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:6px 22px}
-  .p{display:grid;grid-template-columns:16px 104px 1fr 74px;align-items:center;gap:8px;
+  .p{display:grid;grid-template-columns:19px 112px 1fr 74px;align-items:center;gap:8px;
      padding:3px 0;border-bottom:1px solid #ffffff08}
-  .p .name{color:var(--dim);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .p .name{color:var(--dim);font-size:12.5px;cursor:help;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .p .val{font-family:var(--mono);font-size:12px;text-align:right;color:var(--ink)}
   .p.changed .val,.p.changed .name{color:var(--accent)}
-  .lk{width:16px;height:16px;padding:0;border:1px solid var(--line);border-radius:4px;
-      background:transparent;font-size:9px;line-height:1;color:transparent}
-  .lk.on{background:var(--lock);border-color:var(--lock);color:#241c00}
+  /* padlock rather than an abstract square — the square gave no clue what it did */
+  .lk{width:19px;height:19px;padding:0;border:1px solid transparent;border-radius:4px;
+      background:transparent;display:grid;place-items:center;color:#5a6472}
+  .lk svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;
+          stroke-linecap:round;stroke-linejoin:round}
+  .lk:hover{color:var(--ink);background:#ffffff10;border-color:var(--line)}
+  .lk.on{color:var(--lock);background:#f0c04022;border-color:#f0c04055}
+  .lk .shackle-open{display:block} .lk .shackle-shut{display:none}
+  .lk.on .shackle-open{display:none} .lk.on .shackle-shut{display:block}
   input[type=range]{width:100%;-webkit-appearance:none;appearance:none;background:transparent;height:18px;margin:0}
   input[type=range]::-webkit-slider-runnable-track{height:4px;background:#2f3641;border-radius:2px}
   input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;
@@ -97,26 +112,41 @@
     <span class="spacer"></span>
     <span class="status"><span class="dot" id="dot"></span><span id="status">not connected</span></span>
     <select id="devsel" title="MIDI output"><option>—</option></select>
-    <button id="connect">Connect</button>
-    <button id="sync" disabled title="Ask the pedal for all current values">Sync&nbsp;←&nbsp;Pedal</button>
+    <button id="connect" title="Ask the browser for MIDI access and find the pedal">Connect</button>
+    <button id="sync" disabled title="Read every parameter back off the pedal into this page">↧&nbsp; Read from pedal</button>
   </div>
   <div class="bar row2">
-    <button class="primary" id="roll"
-      title="Throw the current sound away and roll every unlocked parameter from scratch">⚄ Randomize</button>
-    <button id="mutate"
-      title="Keep the current sound and nudge every unlocked parameter by 'by'. Mode is held.">Mutate</button>
-    <label class="inl" title="How far Mutate moves things. Does not affect Randomize."
-      >by <input type="range" id="amount" min="0" max="100" value="25" style="width:74px"><span class="chip" id="amountv">25%</span></label>
-    <label class="inl" style="color:var(--accent2);font-weight:600">sanity
-      <input type="range" id="sanity" min="0" max="100" value="80" style="width:96px">
-      <span class="chip" id="sanityv">80%</span></label>
-    <label class="inl">history
-      <button id="undo" title="Back to the previous roll">◀</button>
-      <button id="redo" title="Forward to the next roll">▶</button>
-      <span class="chip" id="histv">0/0</span></label>
+    <div class="grp" title="Everything in this box makes a new sound and sends it to the pedal"><span class="glab">generate</span>
+      <button class="primary" id="roll"
+        title="Throw the current sound away and roll every unlocked parameter from scratch">⚄&nbsp; Randomize</button>
+
+      <div class="grp sub" title="The amount slider applies to Mutate only"><span class="glab">↻ vary current sound</span>
+        <button id="mutate"
+          title="Keep the current sound and nudge every unlocked parameter. Mode is held.">Mutate</button>
+        <label class="inl" title="How far Mutate moves each parameter. Mutate only — Randomize ignores it."
+          >amount <input type="range" id="amount" min="0" max="100" value="25" style="width:68px"
+          ><span class="chip" id="amountv">25%</span></label>
+      </div>
+
+      <label class="inl" style="color:var(--accent2);font-weight:600"
+        title="How hard to keep rolls inside musical bounds. Applies to Randomize and Mutate alike."
+        >sanity <input type="range" id="sanity" min="0" max="100" value="80" style="width:92px"
+        ><span class="chip" id="sanityv">80%</span></label>
+    </div>
+
+    <div class="grp"><span class="glab">history</span>
+      <button id="undo" title="Back to the previous sound">◀</button>
+      <span class="chip" id="histv">0/0</span>
+      <button id="redo" title="Forward to the next sound">▶</button>
+    </div>
+
     <span class="spacer"></span>
-    <button id="keep" title="Save this sound to the browser so you can recall it later">★ Keep</button>
-    <button id="panic" title="Blend 50%, feedback 0, freeze 0">Panic</button>
+
+    <div class="grp"><span class="glab">this sound</span>
+      <button id="keep" title="Save this sound in the browser so you can recall it later">★&nbsp; Keep</button>
+      <button id="panic"
+        title="Rescue: blend 50%, feedback 0, freeze 0 — brings the pedal back to something audible">⛑&nbsp; Panic</button>
+    </div>
   </div>
   <div class="bar" style="margin-top:7px">
     <span class="hint" id="charline" style="margin:0"></span>
@@ -139,8 +169,8 @@
     <label class="inl" style="color:var(--accent);font-weight:600">
       <input type="checkbox" id="cNoLimits"> NO LIMITS</label>
     <span class="spacer"></span>
-    <button id="lockAll" class="ghost">lock all</button>
-    <button id="lockNone" class="ghost">unlock all</button>
+    <button id="lockAll" class="ghost" title="Hold every parameter — nothing will be rolled">🔒 Lock all</button>
+    <button id="lockNone" class="ghost" title="Release every parameter back to the randomizer">🔓 Unlock all</button>
   </div>
   <p class="hint"><strong>NO LIMITS</strong> ignores sanity and every other setting on this row: each
      parameter is rolled uniformly across its whole legal range, note divisions included. Locks still apply.<br>
@@ -166,7 +196,7 @@
   <fieldset>
     <legend>Presets on the pedal</legend>
     <div class="bar" style="gap:6px;margin-bottom:8px">
-      <button id="pScan" disabled title="Read every slot and its name off the pedal">Refresh</button>
+      <button id="pScan" disabled title="Re-read every slot and name from the pedal">⟳&nbsp; Refresh list</button>
       <span class="spacer"></span>
       <span class="chip" id="pCount">—</span>
     </div>
@@ -182,8 +212,8 @@
     <legend>Kept sounds <span id="favcount" class="chip"></span></legend>
     <div id="favs"></div>
     <div class="bar" style="margin-top:8px;gap:6px">
-      <button id="favExport" class="ghost">Export</button>
-      <button id="favImport" class="ghost">Import</button>
+      <button id="favExport" class="ghost" title="Download the kept sounds as a JSON file">↥ Export</button>
+      <button id="favImport" class="ghost" title="Load kept sounds from a JSON file">↧ Import</button>
       <input type="file" id="favFile" accept="application/json,.json" hidden>
     </div>
   </fieldset>
@@ -314,6 +344,35 @@ const PARAMS=[
  {k:'densityDiv',prop:8235, label:'Density Div', type:'idx', opts:divOpts(DIV_FAST), g:'Tempo sync'},
  {k:'lfoDiv',    prop:8236, label:'LFO Div',     type:'idx', opts:divOpts(DIV_SLOW), g:'Tempo sync'},
 ];
+/* What each parameter actually does, from the Particle 2 manual. Shown on hover —
+   kept out of PARAMS so that table stays readable as a table. */
+const HELP={
+ mode:      "Which pair of parameters the pedal's Delay/Pitch and Param knobs drive, and the overall character.",
+ blend:     "Wet/dry mix. The dry signal stays at unity gain up to 50%, so there is a slight boost above that.",
+ feedback:  "How much of the output is fed back for repeats.",
+ fdbkTone:  "Low-pass filter on the feedback path. Lower is darker, duller repeats.",
+ expert:    "Lets the Mode switch reassign knobs without resetting the other parameters. Held on so rolled combinations survive.",
+ trails:    "Repeats keep decaying after you bypass the pedal.",
+ chop:      "Grain size. Short grains give glitchy tremolo and noise; long grains are smooth.",
+ density:   "How often grains start. High values overlap into a continuous sound, low values break the signal into blips.",
+ freeze:    "Amplitude threshold for freezing the buffer. Above 0 the pedal starts holding audio instead of passing your playing through.",
+ freezeMode:"Grain freezes the delay buffer; Delay recycles the delay output the way the Particle v1 did.",
+ delayTime: "Delay time, 0-2500 ms.",
+ delayRnd:  "How far the playback head jumps at random within the delay time.",
+ direction: "Probability that each grain plays forward. 0% is a reverse delay; middle values flip grains at random.",
+ fdbkMode:  "How repeats are made: recycled back through the granular engine, sent to a separate delay line, or repeated a counted number of times.",
+ pitch:     "Base pitch shift for every grain, plus or minus 12 semitones.",
+ detune:    "Random detuning spread around the base pitch.",
+ pitchRnd:  "Random pitch jump per grain, added on top of the base shift.",
+ lfoRate:   "Sweeps the delay buffer in delay modes, or the pitch in pitch modes. Centre is off.",
+ pitchQnt:  "Quantizes pitch shifts to musical intervals instead of a continuous slide.",
+ pan:       "Fixed stereo position for the grains.",
+ spread:    "Random stereo spread, added to the pan position. Each grain lands somewhere in the field.",
+ delayDiv:  "Note division for the delay time when synced to tap tempo or MIDI clock. Off disables sync for it.",
+ chopDiv:   "Note division for grain size. Equal to or shorter than the delay division keeps the slicing in time.",
+ densityDiv:"Note division for grain density.",
+ lfoDiv:    "Note division for the LFO rate."
+};
 const BY_KEY=Object.fromEntries(PARAMS.map(p=>[p.k,p]));
 const BY_PROP=Object.fromEntries(PARAMS.map(p=>[p.prop,p]));
 
@@ -583,10 +642,19 @@ function buildUI(){
                   'text-transform:uppercase;margin:6px 0 4px">'+g+'</div>';
     PARAMS.filter(p=>p.g===g).forEach(p=>{
       const row=document.createElement('div'); row.className='p';
-      const lk=document.createElement('button'); lk.className='lk'; lk.textContent='●';
-      lk.title='lock '+p.label;
-      lk.onclick=()=>{locks[p.k]=!locks[p.k]; lk.classList.toggle('on',locks[p.k]); describe();};
+      const lk=document.createElement('button'); lk.className='lk';
+      lk.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true">'+
+        '<rect x="3" y="7" width="10" height="7" rx="1.5"/>'+
+        '<path class="shackle-open" d="M5.6 7V4.8a2.6 2.6 0 0 1 5.0-.9"/>'+
+        '<path class="shackle-shut" d="M5.6 7V4.6a2.4 2.4 0 0 1 4.8 0V7"/></svg>';
+      lk.setAttribute('aria-label','Lock '+p.label);
+      const lkTip=()=>lk.title = locks[p.k]
+        ? p.label+' is locked — Randomize and Mutate will leave it alone. Click to unlock.'
+        : 'Lock '+p.label+' so Randomize and Mutate leave it alone';
+      lkTip();
+      lk.onclick=()=>{locks[p.k]=!locks[p.k]; lk.classList.toggle('on',locks[p.k]); lkTip(); describe();};
       const nm=document.createElement('div'); nm.className='name'; nm.textContent=p.label;
+      if(HELP[p.k]) nm.title=p.label+' — '+HELP[p.k];
       const val=document.createElement('div'); val.className='val';
       let ctl;
       if(p.type==='cont'){
@@ -915,7 +983,9 @@ function init(){
     e.target.value='';};
 
   document.addEventListener('keydown',e=>{
-    if(e.target.matches('input,select,textarea')) return;
+    /* target is not always an Element (it can be document itself) */
+    const t=e.target;
+    if(t instanceof Element && t.matches('input,select,textarea,button')) return;
     if(e.code==='Space'){e.preventDefault();randomize();}
     if(e.key==='m') mutate();
     if(e.key==='[') goto(hIdx-1);
