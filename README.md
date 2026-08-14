@@ -43,7 +43,7 @@ gets confusing, though it won't break anything.
 | **★ Bookmark** | Store the current sound in this browser's Bookmarks list. Does not touch the pedal |
 | **padlock** (left of each row) | Hold that parameter — Randomize and Mutate leave it alone |
 | **Sync ← Pedal** | Read all current values back off the pedal |
-| **⏻ Mute** | Bypass the pedal (CC 81). Changes nothing about the sound, so unmuting brings the same patch straight back. Follows the pedal's own footswitch |
+| **⏻ Bypass** | Disengage the pedal (CC 81). Changes nothing about the sound, so re-engaging brings the same patch straight back. Follows the pedal's own footswitch |
 
 Any slider or dropdown also works as a plain editor — moving it sends immediately.
 Hover a parameter name for a description of what it does.
@@ -210,15 +210,14 @@ stores a sound in this browser only, so you can shortlist a dozen candidates wit
 burning through the pedal's 127 slots. Nothing is on the pedal until you hit **write**
 on a preset row. Clearing browser data loses the bookmarks — Export writes them to JSON.
 
-### Mute
+### Bypass
 
-**⏻ Mute** bypasses the pedal with CC 81 rather than touching the patch, so unmuting
-returns the same sound. The pedal reports its own state on CC 88 when you use the
-footswitch, so the button follows the pedal instead of drifting out of sync.
+**⏻ Bypass** disengages the pedal with CC 81 rather than touching the patch, so
+engaging it again returns the same sound. The pedal reports its own state on CC 88 when
+you use the footswitch, so the button follows the pedal instead of drifting out of sync.
 
 Bypass is not silence: your dry signal still passes through, unless the pedal's Bypass
-Mode is set to Kill Dry. And with Trails on, existing repeats keep decaying after the
-bypass.
+Mode is set to Kill Dry. And with Trails on, existing repeats keep decaying after it.
 
 ## Notes on how it drives the pedal
 

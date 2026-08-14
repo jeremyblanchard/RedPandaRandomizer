@@ -144,8 +144,8 @@
 
     <div class="grp"><span class="glab">this sound</span>
       <button id="keep" title="Add this sound to the Bookmarks list in the sidebar. Stored in this browser only — use a preset row's write button to put it on the pedal.">★&nbsp; Bookmark</button>
-      <button id="mute"
-        title="Bypass the pedal — CC 81. Nothing about the sound is changed, so unmuting brings it straight back.">⏻&nbsp; Mute</button>
+      <button id="bypass"
+        title="Bypass the pedal — CC 81. Nothing about the sound changes, so engaging it again brings the same patch straight back.">⏻&nbsp; Bypass</button>
     </div>
   </div>
   <div class="bar" style="margin-top:7px">
@@ -274,18 +274,18 @@ let effectOn=true;
 function setBypass(bypass){
   effectOn=!bypass;
   controlChange(CC_EFFECT_ON, bypass?0:127);
-  log(bypass?'muted — pedal bypassed':'unmuted — effect engaged');
+  log(bypass?'pedal bypassed':'effect engaged');
   renderBypass();
 }
 function renderBypass(){
-  const b=document.getElementById('mute'); if(!b) return;
-  b.innerHTML = effectOn ? '⏻&nbsp; Mute' : '⏻&nbsp; Muted';
+  const b=document.getElementById('bypass'); if(!b) return;
+  b.innerHTML = effectOn ? '⏻&nbsp; Bypass' : '⏻&nbsp; Bypassed';
   b.style.background = effectOn?'':'var(--accent)';
   b.style.borderColor = effectOn?'':'var(--accent)';
   b.style.color = effectOn?'':'#160b06';
   b.style.fontWeight = effectOn?'':'700';
-  b.title = effectOn ? 'Bypass the pedal — CC 81. Nothing about the sound is changed, '+
-                       'so unmuting brings it straight back.'
+  b.title = effectOn ? 'Bypass the pedal — CC 81. Nothing about the sound changes, '+
+                       'so engaging it again brings the same patch back.'
                      : 'Pedal is bypassed. Click to engage the effect again.';
 }
 
@@ -762,7 +762,7 @@ function useSelected(){
 function onMessage(e){
   const d=e.data;
   /* The pedal reports its own bypass state on CC 88 when you use the footswitch,
-     so the Mute button follows the pedal instead of drifting out of sync. */
+     so the Bypass button follows the pedal instead of drifting out of sync. */
   if((d[0]&0xF0)===0xB0 && d.length===3 && (d[0]&0x0F)===midiChannel){
     if(d[1]===CC_EFFECT_ON_RX || d[1]===CC_EFFECT_ON){
       effectOn = d[2]>=64; renderBypass();
@@ -974,7 +974,7 @@ function init(){
   document.getElementById('mutate').onclick=mutate;
   document.getElementById('undo').onclick=()=>goto(hIdx-1);
   document.getElementById('redo').onclick=()=>goto(hIdx+1);
-  document.getElementById('mute').onclick=()=>setBypass(effectOn);
+  document.getElementById('bypass').onclick=()=>setBypass(effectOn);
   document.getElementById('lockAll').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=true);render();describe();};
   document.getElementById('lockNone').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=false);render();describe();};
 
