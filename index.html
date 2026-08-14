@@ -19,6 +19,7 @@
   h1{font-size:15px;margin:0;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
   h1 small{color:var(--dim);letter-spacing:.02em;text-transform:none;font-weight:400;margin-left:8px}
   .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;max-width:1180px;margin:0 auto}
+  .bar.row2 select{max-width:150px}
   .bar.row2{margin-top:8px}
   button,select,input[type=text],input[type=number]{
     background:var(--panel2);color:var(--ink);border:1px solid var(--line);
@@ -78,21 +79,23 @@
   <div class="bar row2">
     <button class="primary" id="roll">⚄ Randomize</button>
     <button id="mutate" title="Nudge the current sound instead of replacing it">Mutate</button>
-    <label class="inl">amount <input type="range" id="amount" min="0" max="100" value="25" style="width:90px"><span class="chip" id="amountv">25%</span></label>
-    <span style="width:10px"></span>
-    <label class="inl" style="color:var(--accent2);font-weight:600">musical
-      <input type="range" id="musical" min="0" max="100" value="80" style="width:110px">
-      <span class="chip" id="musicalv">80%</span></label>
-    <span style="width:10px"></span>
+    <label class="inl">amount <input type="range" id="amount" min="0" max="100" value="25" style="width:74px"><span class="chip" id="amountv">25%</span></label>
+    <label class="inl" style="color:var(--accent2);font-weight:600">sanity
+      <input type="range" id="sanity" min="0" max="100" value="80" style="width:96px">
+      <span class="chip" id="sanityv">80%</span></label>
     <label class="inl">character
-      <select id="character"></select>
+      <select id="character" title="Which corner of the pedal to roll in"></select>
     </label>
-    <button id="undo" title="Previous roll">◀</button>
-    <button id="redo" title="Next roll">▶</button>
-    <span class="chip" id="histv">0/0</span>
+    <label class="inl">history
+      <button id="undo" title="Back to the previous roll">◀</button>
+      <button id="redo" title="Forward to the next roll">▶</button>
+      <span class="chip" id="histv">0/0</span></label>
     <span class="spacer"></span>
-    <button id="keep">★ Keep</button>
+    <button id="keep" title="Save this sound to the browser so you can recall it later">★ Keep</button>
     <button id="panic" title="Blend 50%, feedback 0, freeze 0">Panic</button>
+  </div>
+  <div class="bar" style="margin-top:7px">
+    <span class="hint" id="charline" style="margin:0"></span>
   </div>
 </header>
 
@@ -299,46 +302,46 @@ const BASE={
   detune:[0,1], pitchRnd:[0,1], lfoRate:[0.46,0.54], pan:[0.4,0.6], spread:[0,1]
 };
 const CHARACTERS={
-  chaos:{label:'Full chaos', modes:[0,1,2,3,4,5,6,7], divs:'rare',
+  chaos:{label:'Full chaos', blurb:'all 8 modes, every feedback mode, divisions mostly off. The widest net.', modes:[0,1,2,3,4,5,6,7], divs:'rare',
     r:{lfoRate:[0,1], freeze:[0,0.25], fdbkTone:[0,1]}},
 
-  ambient:{label:'Ambient wash', modes:[0,2,7], divs:'off',
+  ambient:{label:'Ambient wash', blurb:'long grains, dense overlap, post-delay feedback and quantized intervals. Pads and swells.', modes:[0,2,7], divs:'off',
     r:{blend:[0.4,0.8], feedback:[0.45,0.85], fdbkTone:[0.4,0.95], chop:[0.45,0.95],
        density:[0.5,1], delayTime:[0.2,0.75], direction:[0.85,1], detune:[0.08,0.5],
        pitchRnd:[0,0.35], spread:[0.4,1], pan:[0.45,0.55]},
     pick:{fdbkMode:[2,3,2,3,10], pitchQnt:[4,5,6,1], freezeMode:[0]}},
 
-  glitch:{label:'Glitch / stutter', modes:[3,4,5,7], divs:'musical',
+  glitch:{label:'Glitch / stutter', blurb:'short grains, heavy delay randomization, the Repeat #/% feedback modes, note-locked slicing.', modes:[3,4,5,7], divs:'musical',
     r:{blend:[0.5,1], feedback:[0.2,0.65], chop:[0,0.3], density:[0.1,0.6],
        delayRnd:[0.35,1], delayTime:[0.1,0.7], direction:[0.3,1], spread:[0.2,1]},
     pick:{fdbkMode:[4,5,6,7,8,9], freezeMode:[0]}},
 
-  reverse:{label:'Reverse', modes:[5], divs:'musical',
+  reverse:{label:'Reverse', blurb:'Delay + Rev only. Grains play backwards, delay and chop locked to note divisions.', modes:[5], divs:'musical',
     r:{blend:[0.45,0.9], feedback:[0.15,0.6], chop:[0.25,0.7], delayTime:[0.25,0.85],
        direction:[0,0.35], detune:[0,0.2], pitchRnd:[0,0.2]},
     pick:{fdbkMode:[10,0,2], freezeMode:[0]}},
 
-  stretch:{label:'Time stretch', modes:[6], divs:'off',
+  stretch:{label:'Time stretch', blurb:'Delay + LFO only. The LFO sweeps the buffer for time stretch, compression and skip.', modes:[6], divs:'off',
     r:{blend:[0.5,1], feedback:[0.1,0.5], chop:[0.05,0.6], delayTime:[0.4,1],
        direction:[0.7,1], lfoRate:[0,1]},
     pick:{fdbkMode:[10,2,0], freezeMode:[0]}},
 
-  cloud:{label:'Pitch cloud', modes:[2], divs:'off',
+  cloud:{label:'Pitch cloud', blurb:'Pitch + Detune only. Detuned grains stacked into clouds, wide stereo, quantized intervals.', modes:[2], divs:'off',
     r:{blend:[0.4,0.85], feedback:[0.4,0.85], chop:[0.3,0.8], density:[0.4,1],
        detune:[0.3,0.95], pitch:[0.35,0.65], spread:[0.5,1], direction:[0.9,1]},
     pick:{fdbkMode:[2,3,0,1], pitchQnt:[1,4,5,6], freezeMode:[0]}},
 
-  shimmer:{label:'Shimmer / organ', modes:[0,2], divs:'off',
+  shimmer:{label:'Shimmer / organ', blurb:'octave-up pitch through recycling feedback, long grains, high density. Organ and shimmer.', modes:[0,2], divs:'off',
     r:{blend:[0.4,0.8], feedback:[0.5,0.9], fdbkTone:[0.5,1], chop:[0.4,0.9],
        density:[0.5,1], detune:[0,0.3], pitch:[0.7,0.98], direction:[0.9,1], spread:[0.3,0.9]},
     pick:{fdbkMode:[0,1,10], pitchQnt:[2,4], freezeMode:[0]}},
 
-  rhythmic:{label:'Tempo-synced', modes:[3,4,5,7], divs:'musical',
+  rhythmic:{label:'Tempo-synced', blurb:'everything locked to the tap tempo grid — delay and chop on related note divisions.', modes:[3,4,5,7], divs:'musical',
     r:{blend:[0.45,0.95], feedback:[0.2,0.7], chop:[0.05,0.5], density:[0.2,0.9],
        delayRnd:[0,0.7], direction:[0.2,1], spread:[0.2,0.9]},
     pick:{fdbkMode:[10,2,3,4,5,9], freezeMode:[0]}},
 
-  broken:{label:'Broken tape', modes:[3], divs:'rare',
+  broken:{label:'Broken tape', blurb:'Delay + Rnd only. Short grains jumping randomly through a dark, filtered delay buffer.', modes:[3], divs:'rare',
     r:{blend:[0.45,0.95], feedback:[0.3,0.75], fdbkTone:[0.1,0.5], chop:[0.02,0.35],
        delayRnd:[0.5,1], delayTime:[0.3,1], detune:[0,0.25], direction:[0.5,1]},
     pick:{fdbkMode:[10,0,2,9], freezeMode:[0,1]}},
@@ -394,6 +397,7 @@ const MUSICAL_QNT=[1,4,5,6];          // drop Free — continuous shift lands be
 const DIV_BASE=[13,15,16,17,18,19];   // 1/2 … 1/8, sensible delay divisions
 
 /* ─────────────────────────── the roll ─────────────────────────── */
+const BLEND_FLOOR=0.01;   // 0% blend is 100% dry — the roll is inaudible
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
@@ -406,7 +410,7 @@ function constraints(){return{
   v22:document.getElementById('cV22').checked,
   forceSync:document.getElementById('cSync').checked,
   noLimits:document.getElementById('cNoLimits').checked,
-  musical:+document.getElementById('musical').value/100};}
+  sanity:+document.getElementById('sanity').value/100};}
 
 function rollDiv(mode,allowed){
   if(mode==='off')     return Math.random()<0.12 ? pick(DIV_MUSICAL) : 0;
@@ -421,7 +425,7 @@ const semiToVal=s=>(s/12+1)/2;
 /* Decisions that span several parameters — mode, and note divisions that have to
    relate to each other — are made once per roll, before the per-parameter pass. */
 function rollPlan(ch,c){
-  const t=c.noLimits?0:c.musical;
+  const t=c.noLimits?0:c.sanity;
   const mode = c.noLimits ? pick(MODES.map(o=>o[0])) : pick(ch.modes);
   let divs=null;
   if(Math.random()<curves(t).S){
@@ -440,7 +444,7 @@ function rollPlan(ch,c){
 
 function rollValue(p,ch,c,plan){
   const all=p.opts?p.opts.map(o=>o[0]):null;
-  const t=plan?plan.t:(c.noLimits?0:c.musical);
+  const t=plan?plan.t:(c.noLimits?0:c.sanity);
   const sig=plan?plan.sig:[];
 
   if(p.type==='tog'){
@@ -466,7 +470,9 @@ function rollValue(p,ch,c,plan){
     return pick(list);
   }
 
-  if(c.noLimits) return Math.random();
+  /* Blend 0 is 100% dry — the roll happened but you can't hear any of it. Floor it
+     everywhere, NO LIMITS included; this is the one bound that isn't about taste. */
+  if(c.noLimits) return p.k==='blend' ? Math.max(BLEND_FLOOR,Math.random()) : Math.random();
 
   let [a,b]=(ch.r&&ch.r[p.k]) || BASE[p.k] || [0,1];
   if(p.k==='freeze' && c.freeze) [a,b]=[0,1];
@@ -488,7 +494,7 @@ function rollValue(p,ch,c,plan){
   if(p.k==='pitch' && Math.random()<cv.M) v=semiToVal(pick(CONSONANT));
   else if(p.k==='pitch' && c.snap){const s=Math.round((v*2-1)*12); v=semiToVal(s);}
 
-  if(p.k==='blend')    v=Math.min(v,c.maxBlend);
+  if(p.k==='blend')    v=clamp(Math.min(v,c.maxBlend),BLEND_FLOOR,1);
   if(p.k==='feedback') v=Math.min(v,c.maxFdbk);
   return clamp(v);
 }
@@ -501,7 +507,7 @@ function randomize(){
     if(p.v22 && !c.v22) return;
     state[p.k]=rollValue(p,ch,c,plan);
   });
-  commit('roll · '+ch.label+(c.noLimits?' · no limits':' · musical '+Math.round(c.musical*100)+'%'));
+  commit('roll · '+ch.label+(c.noLimits?' · no limits':' · sanity '+Math.round(c.sanity*100)+'%'));
 }
 
 function mutate(){
@@ -514,9 +520,9 @@ function mutate(){
     if(p.type==='cont'){
       let [a,b]=c.noLimits ? [0,1] : ((ch.r&&ch.r[p.k]) || BASE[p.k] || [0,1]);
       if(!c.noLimits && p.k==='freeze' && c.freeze) [a,b]=[0,1];
-      if(!c.noLimits && c.musical>0 && !(p.k==='freeze'&&c.freeze)){
+      if(!c.noLimits && c.sanity>0 && !(p.k==='freeze'&&c.freeze)){
         const tgt = sig.includes(p.k) ? (SIGNATURE_RANGE[p.k]||MUSICAL[p.k]) : MUSICAL[p.k];
-        if(tgt) [a,b]=lerpR([a,b],tgt,curves(c.musical)[CURVE[p.k]||'S']);
+        if(tgt) [a,b]=lerpR([a,b],tgt,curves(c.sanity)[CURVE[p.k]||'S']);
       }
       let v=state[p.k]+(Math.random()*2-1)*amt*Math.max(0.25,b-a);
       v=clamp(v,Math.min(a,state[p.k]),Math.max(b,state[p.k]));
@@ -525,10 +531,10 @@ function mutate(){
         if(p.k==='feedback') v=Math.min(v,c.maxFdbk);
         if(p.k==='pitch' && c.snap){const s=Math.round((v*2-1)*12); v=(s/12+1)/2;}
       }
-      state[p.k]=clamp(v);
+      state[p.k]=clamp(v, p.k==='blend'?BLEND_FLOOR:0, 1);
     } else if(p.k!=='mode' && Math.random()<amt*0.6){
       /* Mode is held: changing it is a different sound, not a nudge. */
-      state[p.k]=rollValue(p,ch,c,{mode:state.mode,divs:null,sig,t:c.musical});
+      state[p.k]=rollValue(p,ch,c,{mode:state.mode,divs:null,sig,t:c.sanity});
     }
   });
   commit('mutate '+Math.round(amt*100)+'%');
@@ -709,6 +715,20 @@ function init(){
     const o=document.createElement('option'); o.value=k; o.textContent=v.label; csel.append(o);});
   csel.value='chaos';
 
+  const charline=document.getElementById('charline');
+  const describe=()=>{
+    if(document.getElementById('cNoLimits').checked){
+      charline.innerHTML='<strong style="color:var(--accent)">NO LIMITS</strong> — character and sanity ignored.';
+      return;
+    }
+    const c=CHARACTERS[csel.value], s=+document.getElementById('sanity').value;
+    charline.innerHTML='<strong>'+c.label+'</strong> — '+c.blurb+
+      '  <span style="opacity:.7">sanity '+s+'%: '+
+      (s>=80?'stays inside musical bounds':s>=50?'usable, but loose':'wild — expect broken sounds')+
+      '.</span>';
+  };
+  csel.onchange=describe;
+
   buildUI(); render(); renderFavs();
 
   document.getElementById('connect').onclick=connect;
@@ -724,18 +744,19 @@ function init(){
   document.getElementById('lockNone').onclick=()=>{PARAMS.forEach(p=>locks[p.k]=false);render();};
 
   const nl=document.getElementById('cNoLimits');
-  const overridden=['cBlend','cFdbk','cFreeze','cSnap','cSync','character','musical'];
+  const overridden=['cBlend','cFdbk','cFreeze','cSnap','cSync','character','sanity'];
   nl.onchange=()=>{
     overridden.forEach(i=>{const el=document.getElementById(i);
       el.disabled=nl.checked; el.closest('label,.inl')?.style.setProperty('opacity',nl.checked?'.4':'1');});
     document.getElementById('roll').textContent=nl.checked?'⚄ Randomize · NO LIMITS':'⚄ Randomize';
+    describe();
   };
   nl.onchange();
 
-  [['amount','amountv','%'],['musical','musicalv','%'],
+  [['amount','amountv','%'],['sanity','sanityv','%'],
    ['cBlend','cBlendv',''],['cFdbk','cFdbkv','']].forEach(([a,b,s])=>{
     const r=document.getElementById(a),o=document.getElementById(b);
-    const u=()=>o.textContent=r.value+s; r.oninput=u; u();});
+    const u=()=>{o.textContent=r.value+s; if(a==='sanity') describe();}; r.oninput=u; u();});
 
   document.getElementById('keep').onclick=()=>{
     const n=prompt('Name this sound',

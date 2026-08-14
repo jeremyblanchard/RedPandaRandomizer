@@ -5,7 +5,7 @@ talking to the pedal directly over Web MIDI SysEx. One self-contained HTML file,
 dependencies, no build step.
 
 The point is to find sounds you wouldn't have dialled in yourself — but *usable* ones.
-A `musical` control keeps rolls inside bounds derived from the pedal's own manual, and
+A `sanity` control keeps rolls inside bounds derived from the pedal's own manual, and
 a `NO LIMITS` switch throws that away when you want it.
 
 > **Not affiliated with, endorsed by, or supported by Red Panda.** Particle is their
@@ -36,9 +36,9 @@ gets confusing, though it won't break anything.
 |---|---|
 | **Randomize** (or `Space`) | Roll a whole new sound and send it to the pedal |
 | **Mutate** (`m`) | Nudge the current sound by *amount* instead of replacing it |
-| **musical** | How hard to keep the roll inside usable territory — see below |
+| **sanity** | How hard to keep the roll inside usable territory — see below |
 | **character** | Biases the roll — see below |
-| **◀ ▶** (`[` `]`) | Walk back and forth through every roll this session |
+| **history ◀ ▶** (`[` `]`) | Walk back through every roll this session and forward again |
 | **★ Keep** | Save the current sound to browser storage, recall it later |
 | **lock** (square left of each row) | That parameter is never touched by Randomize/Mutate |
 | **Sync ← Pedal** | Read all current values back off the pedal |
@@ -46,7 +46,23 @@ gets confusing, though it won't break anything.
 
 Any slider or dropdown also works as a plain editor — moving it sends immediately.
 
-### The `musical` slider
+### The intended loop
+
+1. Pick a **character** and hit **Randomize** (or tap `Space`) repeatedly while playing.
+   Every roll goes straight to the pedal, so you hear each one immediately.
+2. Something catches your ear — hit **★ Keep** before you roll past it.
+3. Roll a few more. Went one too far? **history ◀** walks back through everything you
+   rolled this session and **▶** walks forward again, so a sound is never lost to an
+   itchy trigger finger.
+4. Close but not right? **Lock** the parts that work — the square at the left of each
+   row — and hit **Mutate** to jiggle only the rest by *amount*.
+5. Keeper? **Write to pedal** puts it in a preset slot with a name.
+
+Locks are the main tool for steering. Lock Mode and Delay Time and you're auditioning
+grain and pitch behaviour against a fixed rhythmic bed; lock everything but Pitch and
+Detune and you're auditioning harmony.
+
+### The `sanity` slider
 
 Default 80. Uniform randomization sounds bad on this pedal for one structural reason
 above all others: **Expert Mode is on, so every randomization source is live at once.**
@@ -90,7 +106,7 @@ pitch intervals, 25 division pairings and 5 feedback modes.
 
 At 0 it behaves as it did before. **NO LIMITS** overrides it entirely.
 
-### Musical ranges
+### Sanity ranges
 
 The bounds the slider pulls toward, and why:
 
@@ -114,8 +130,21 @@ The bounds the slider pulls toward, and why:
 
 ### Characters
 
-`Full chaos` · `Ambient wash` · `Glitch / stutter` · `Reverse` · `Time stretch` ·
-`Pitch cloud` · `Shimmer / organ` · `Tempo-synced` · `Broken tape`
+`character` picks which corner of the pedal to roll in. It's the coarse control:
+pick the neighbourhood, then hit Randomize until something in it grabs you. The line
+under the toolbar always says what the selected one does.
+
+| | |
+|---|---|
+| **Full chaos** | all 8 modes, every feedback mode, divisions mostly off. The widest net. |
+| **Ambient wash** | long grains, dense overlap, post-delay feedback, quantized intervals |
+| **Glitch / stutter** | short grains, heavy delay randomization, the Repeat #/% feedback modes |
+| **Reverse** | Delay + Rev only. Grains play backwards, delay and chop note-locked |
+| **Time stretch** | Delay + LFO only. The LFO sweeps the buffer for stretch, compression, skip |
+| **Pitch cloud** | Pitch + Detune only. Detuned grains stacked into clouds, wide stereo |
+| **Shimmer / organ** | octave-up pitch through recycling feedback, long grains, high density |
+| **Tempo-synced** | everything on the tap tempo grid, delay and chop on related divisions |
+| **Broken tape** | Delay + Rnd only. Short grains jumping through a dark, filtered buffer |
 
 Each one constrains mode choice, parameter ranges, feedback mode and note divisions to
 the region of the parameter space that actually produces that sound. Ranges came from
@@ -139,6 +168,10 @@ grains, high density, post-delay feedback and quantized pitch intervals.
   - **The metaparameters are never sent.** Chop/Freeze, Delay/Pitch and Param are
     aliases for the individual parameters, and each overwrites several of them. Leaving
     them out is what makes the full space reachable, not a restriction on it.
+
+  Blend is the one exception: it never rolls below 1%, `NO LIMITS` included. At 0 the
+  pedal is 100% dry, so the roll happened but none of it reaches your ears — that isn't
+  a sound, it's a silent failure.
 
 - **max blend / max feedback** — hard ceilings on the two parameters that make a roll
   unusable rather than interesting.
